@@ -1,4 +1,6 @@
---- a/server_manager/Cargo.toml
+diff --git a/server_manager/Cargo.toml b/server_manager/Cargo.toml
+index bafdb3f..a418ce8 100644
+--- b/server_manager/Cargo.toml
 +++ b/server_manager/Cargo.toml
 @@ -1,6 +1,6 @@
  [package]
@@ -8,7 +10,7 @@
  edition = "2021"
  
  [dependencies]
-@@ -21,6 +21,7 @@ tower-http = { version = "0.5", features = ["fs", "trace"] }
+@@ -23,6 +23,7 @@ tower-http = { version = "0.5", features = ["fs", "trace"] }
  bcrypt = "0.15"
  tower-sessions = "0.12"
  time = "0.3"
