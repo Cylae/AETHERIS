@@ -355,8 +355,9 @@ fn test_secrets_hex_generation_randomness() {
     let mut seen = HashSet::new();
     
     // Generate 100 secrets files, verify no duplicates
-    for _ in 0..100 {
-        let secrets = Secrets::load_or_create().unwrap();
+    for i in 0..100 {
+        let path = format!("/tmp/secrets_{}.yaml", i);
+        let secrets = Secrets::load_or_create(&path).unwrap();
         let root_pw = secrets.mysql_root_password.unwrap();
         assert!(!seen.contains(&root_pw), "Duplicate password generated!");
         seen.insert(root_pw);

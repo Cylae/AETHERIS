@@ -109,19 +109,16 @@ if [ -f "server_manager/src/interface/cli.rs" ]; then
     log "Applying security fix to CLI..."
     
     # Check if already patched
-    if grep -q "rpassword::read_password" server_manager/src/interface/cli.rs; then
+    if grep -q "read_password_securely" server_manager/src/interface/cli.rs; then
         warning "Security fix already applied to CLI"
     else
-        # Create patched version
         info "Applying password input security fix..."
-        
-        # Add import
-        sed -i '/^use std::io::{self, Write};/a use rpassword::read_password;' server_manager/src/interface/cli.rs
-        
-        log "✓ Security fix applied to CLI"
-        warning "MANUAL STEP REQUIRED: Review server_manager/src/interface/cli.rs"
-        warning "Replace password input sections with read_password_securely() function"
-        warning "See: $SCRIPT_DIR/patches/001-security-password-input.patch"
+        if patch -p1 < "$SCRIPT_DIR/patches/001-security-password-input.patch"; then
+            log "✓ Security fix applied to CLI"
+        else
+            error "Failed to apply CLI security patch!"
+            exit 1
+        fi
     fi
 else
     error "CLI source file not found!"
@@ -196,20 +193,17 @@ log "Backup location: $BACKUP_DIR"
 log "Binary location: $BINARY_PATH"
 log "Log file: $LOG_FILE"
 echo ""
-warning "IMPORTANT MANUAL STEPS:"
+log "POST-INSTALLATION STEPS:"
 echo ""
-echo "1. Review and apply: patches/001-security-password-input.patch"
-echo "   This contains the full CLI security fix implementation"
-echo ""
-echo "2. Test password input (should NOT show characters):"
+echo "1. Test password input (should NOT show characters):"
 echo "   sudo $BINARY_PATH user add testuser --role Observer"
 echo ""
-echo "3. Review documentation:"
+echo "2. Review documentation:"
 echo "   - docs/PRODUCTION_CHECKLIST.md"
 echo "   - docs/TEST_ANALYSIS.md"
 echo "   - README.md"
 echo ""
-echo "4. Change default admin password:"
+echo "3. Change default admin password:"
 echo "   sudo $BINARY_PATH user passwd admin"
 echo ""
 log "For detailed patch application, see: $SCRIPT_DIR/patches/"

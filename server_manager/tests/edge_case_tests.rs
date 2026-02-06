@@ -351,24 +351,16 @@ fn test_partial_service_deployment() {
 fn test_secrets_hex_generation_randomness() {
     use server_manager::core::secrets::Secrets;
     use std::collections::HashSet;
-    use std::fs;
-    use std::path::Path;
 
     let mut seen = HashSet::new();
-    let path = Path::new("/tmp/test_secrets_randomness.yaml");
 
     // Generate 100 secrets files, verify no duplicates
-    for _ in 0..100 {
-        if path.exists() {
-            fs::remove_file(path).unwrap();
-        }
-        let secrets = Secrets::load_or_create(path).unwrap();
+    for i in 0..100 {
+        let path = format!("/tmp/secrets_{}.yaml", i);
+        let secrets = Secrets::load_or_create(&path).unwrap();
         let root_pw = secrets.mysql_root_password.unwrap();
         assert!(!seen.contains(&root_pw), "Duplicate password generated!");
         seen.insert(root_pw);
-    }
-    if path.exists() {
-        fs::remove_file(path).unwrap();
     }
 }
 

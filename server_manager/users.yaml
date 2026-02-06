@@ -1,11 +1,11 @@
 users:
   testuser:
     username: testuser
-    password_hash: $2b$12$iUZnzaU5B3oIXZpDc3UZKezI2DKOzJ/ZekPP4T6hcXHIGG.8ny0SW
+    password_hash: $2b$12$TetNz/MrwwatgnUHnt4ZOOeasV3oIkG35b4O7c8H6bYQ9vb0028t2
     role: Observer
     quota_gb: null
   testuser2:
     username: testuser2
-    password_hash: $2b$12$D8yCn2KQzwE5/KsuMsdO.OSMw3fA9459oQ6uz/j5ptUNGiwgn8gAu
+    password_hash: $2b$12$Z7Kge9.CydYvXxILWBVF1O3AfjoDulUzfj/JPkrimMvigRAAxpCLC
     role: Observer
     quota_gb: null
