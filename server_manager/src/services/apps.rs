@@ -2,7 +2,6 @@ use super::Service;
 use crate::core::hardware::{HardwareInfo, HardwareProfile};
 use crate::core::secrets::Secrets;
 use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
 use anyhow::{Result, Context};
 
@@ -114,12 +113,12 @@ impl Service for NextcloudService {
     fn name(&self) -> &'static str { "nextcloud" }
     fn image(&self) -> &'static str { "lscr.io/linuxserver/nextcloud:latest" }
     fn ports(&self) -> Vec<String> { vec!["127.0.0.1:4443:443".to_string()] }
-    fn configure(&self, _hw: &HardwareInfo, secrets: &Secrets) -> Result<()> {
+    fn configure(&self, runtime: &dyn crate::core::runtime::SystemRuntime, _hw: &HardwareInfo, secrets: &Secrets) -> Result<()> {
         let config_dir = Path::new("./config/nextcloud");
-        fs::create_dir_all(config_dir).context("Failed to create nextcloud config dir")?;
+        runtime.create_dir_all(config_dir).context("Failed to create nextcloud config dir")?;
 
         // Optimization: Only write autoconfig if config.php doesn't exist to prevent overwrites
-        if config_dir.join("config.php").exists() {
+        if runtime.file_exists(&config_dir.join("config.php")) {
             return Ok(());
         }
 
@@ -140,7 +139,7 @@ $AUTOCONFIG = array(
 );
 "#, db_pass, admin_pass);
 
-        fs::write(config_dir.join("autoconfig.php"), php_config).context("Failed to write autoconfig.php")?;
+        runtime.write_file(&config_dir.join("autoconfig.php"), &php_config).context("Failed to write autoconfig.php")?;
         Ok(())
     }
 

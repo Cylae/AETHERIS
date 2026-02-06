@@ -6,6 +6,7 @@ pub mod apps;
 
 use crate::core::hardware::HardwareInfo;
 use crate::core::secrets::Secrets;
+use crate::core::runtime::SystemRuntime;
 use std::collections::HashMap;
 use anyhow::Result;
 
@@ -40,10 +41,10 @@ pub trait Service: Send + Sync {
     fn image(&self) -> &'static str;
 
     /// Generates configuration files (safe to run without side effects on system services)
-    fn configure(&self, _hw: &HardwareInfo, _secrets: &Secrets) -> Result<()> { Ok(()) }
+    fn configure(&self, _runtime: &dyn SystemRuntime, _hw: &HardwareInfo, _secrets: &Secrets) -> Result<()> { Ok(()) }
 
     /// Performs system initialization (e.g., stopping conflicting services). May require root.
-    fn initialize(&self, _hw: &HardwareInfo, _secrets: &Secrets) -> Result<()> { Ok(()) }
+    fn initialize(&self, _runtime: &dyn SystemRuntime, _hw: &HardwareInfo, _secrets: &Secrets) -> Result<()> { Ok(()) }
 
     fn ports(&self) -> Vec<String> { vec![] }
     fn env_vars(&self, _hw: &HardwareInfo, _secrets: &Secrets) -> HashMap<String, String> { HashMap::new() }

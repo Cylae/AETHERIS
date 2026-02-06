@@ -508,7 +508,8 @@ async fn add_user_handler(session: Session, Form(payload): Form<AddUserPayload>)
     };
 
     let mut user_manager = UserManager::load_async().await.unwrap_or_default();
-    if let Err(e) = user_manager.add_user(&payload.username, &payload.password, role_enum, quota_val) {
+    let runtime = crate::core::runtime::LinuxRuntime;
+    if let Err(e) = user_manager.add_user(&runtime, &payload.username, &payload.password, role_enum, quota_val) {
         error!("Failed to add user: {}", e);
         // In a real app we'd flash a message. Here just redirect.
     } else {
@@ -529,7 +530,8 @@ async fn delete_user_handler(session: Session, Path(username): Path<String>) -> 
     }
 
     let mut user_manager = UserManager::load_async().await.unwrap_or_default();
-    if let Err(e) = user_manager.delete_user(&username) {
+    let runtime = crate::core::runtime::LinuxRuntime;
+    if let Err(e) = user_manager.delete_user(&runtime, &username) {
         error!("Failed to delete user: {}", e);
     } else {
         info!("User {} deleted via Web UI by {}", username, session_user.username);

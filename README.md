@@ -4,6 +4,9 @@
 
 **Server Manager** is an intelligent, production-grade orchestrator written in Rust that deploys, manages, and optimizes a complete personal media and cloud server stack. It automatically detects your hardware and configures 28 Docker services for optimal performance.
 
+### 🛡️ Environment-Agnostic Architecture
+As of Version 1.0.5, Server Manager utilizes a fully decoupled, trait-based architecture. All system-level interactions (Docker, Filesystem, Hardware Probing) are abstracted through traits, allowing for 100% test coverage even in CI/Sandbox environments without real hardware or Docker access.
+
 ---
 
 ## 🌟 Key Features
@@ -514,6 +517,7 @@ cargo tarpaulin --out Html
 server_manager/
 ├── src/
 │   ├── core/              # System-level operations
+│   │   ├── runtime.rs     # Trait-based Runtime Abstraction (New)
 │   │   ├── hardware.rs    # Hardware detection
 │   │   ├── docker.rs      # Docker management
 │   │   ├── config.rs      # Configuration handling

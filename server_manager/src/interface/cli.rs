@@ -1,12 +1,11 @@
 use clap::{Parser, Subcommand};
 use log::{info, error};
 use anyhow::{Result, Context};
-use std::process::Command;
-use std::fs;
 use std::io::{self, Write};
 use rpassword::read_password;
 
-use crate::core::{system, hardware, firewall, docker, secrets, config, users};
+use crate::core::{hardware, secrets, config, users};
+use crate::core::runtime::{LinuxRuntime, SystemRuntime, DockerRuntime};
 use crate::services;
 use crate::build_compose_structure;
 
@@ -80,21 +79,22 @@ fn read_password_securely(prompt: &str) -> Result<String> {
 
 pub async fn run() -> Result<()> {
     let cli = Cli::parse();
+    let runtime = LinuxRuntime;
 
     match cli.command {
-        Commands::Install => run_install().await?,
-        Commands::Status => run_status(),
-        Commands::Generate => run_generate().await?,
-        Commands::Enable { service } => run_toggle_service(service, true).await?,
-        Commands::Disable { service } => run_toggle_service(service, false).await?,
+        Commands::Install => run_install(&runtime).await?,
+        Commands::Status => run_status(&runtime),
+        Commands::Generate => run_generate(&runtime).await?,
+        Commands::Enable { service } => run_toggle_service(&runtime, service, true).await?,
+        Commands::Disable { service } => run_toggle_service(&runtime, service, false).await?,
         Commands::Web { port } => crate::interface::web::start_server(port).await?,
-        Commands::User { action } => run_user_management(action)?,
+        Commands::User { action } => run_user_management(&runtime, action)?,
     }
 
     Ok(())
 }
 
-fn run_user_management(action: UserCommands) -> Result<()> {
+fn run_user_management(runtime: &LinuxRuntime, action: UserCommands) -> Result<()> {
     let mut user_manager = users::UserManager::load()?;
 
     match action {
@@ -107,11 +107,11 @@ fn run_user_management(action: UserCommands) -> Result<()> {
 
             let password = read_password_securely(&format!("Enter password for {}: ", username))?;
 
-            user_manager.add_user(&username, &password, role_enum, quota)?;
+            user_manager.add_user(runtime, &username, &password, role_enum, quota)?;
             info!("User '{}' added successfully.", username);
         }
         UserCommands::Delete { username } => {
-            user_manager.delete_user(&username)?;
+            user_manager.delete_user(runtime, &username)?;
             info!("User '{}' deleted successfully.", username);
         }
         UserCommands::List => {
@@ -129,14 +129,14 @@ fn run_user_management(action: UserCommands) -> Result<()> {
 
             let password = read_password_securely(&format!("Enter new password for {}: ", username))?;
 
-            user_manager.update_password(&username, &password)?;
+            user_manager.update_password(runtime, &username, &password)?;
             info!("Password for '{}' updated successfully.", username);
         }
     }
     Ok(())
 }
 
-async fn run_toggle_service(service_name: String, enable: bool) -> Result<()> {
+async fn run_toggle_service(runtime: &LinuxRuntime, service_name: String, enable: bool) -> Result<()> {
     // 1. Load Config
     // We assume we are in the install directory or user provides it.
     // For safety, let's try to switch to /opt/server_manager if config not found locally
@@ -166,21 +166,16 @@ async fn run_toggle_service(service_name: String, enable: bool) -> Result<()> {
     // 2. Re-run generation logic (similar to run_generate/run_install subset)
     // We need secrets for this
     let secrets = secrets::Secrets::load_or_create("secrets.yaml")?;
-    let hw = hardware::HardwareInfo::detect();
+    let hw = hardware::HardwareInfo::detect(runtime);
 
     // Only configure/generate, don't necessarily fully install dependencies again
     // But we should probably trigger docker compose up to apply changes
-    configure_services(&hw, &secrets, &config)?;
-    initialize_services(&hw, &secrets, &config)?;
-    generate_compose(&hw, &secrets, &config).await?;
+    configure_services(runtime, &hw, &secrets, &config)?;
+    initialize_services(runtime, &hw, &secrets, &config)?;
+    generate_compose(runtime, &hw, &secrets, &config).await?;
 
     info!("Applying changes via Docker Compose...");
-    let status = Command::new("docker")
-        .args(["compose", "up", "-d", "--remove-orphans"])
-        .status()
-        .context("Failed to run docker compose up")?;
-
-    if status.success() {
+    if runtime.run_compose_up().is_ok() {
         info!("Service '{}' {} successfully!", service_name, if enable { "enabled" } else { "disabled" });
     } else {
         error!("Failed to apply changes via Docker Compose.");
@@ -189,17 +184,17 @@ async fn run_toggle_service(service_name: String, enable: bool) -> Result<()> {
     Ok(())
 }
 
-async fn run_install() -> Result<()> {
+async fn run_install(runtime: &LinuxRuntime) -> Result<()> {
     info!("Starting Server Manager Installation...");
 
     // 1. Root Check
-    system::check_root()?;
+    runtime.check_root()?;
 
     // 1.1 Create Install Directory
     let install_dir = std::path::Path::new("/opt/server_manager");
     if !install_dir.exists() {
         info!("Creating installation directory at /opt/server_manager...");
-        fs::create_dir_all(install_dir).context("Failed to create /opt/server_manager")?;
+        runtime.create_dir_all(install_dir).context("Failed to create /opt/server_manager")?;
     }
     std::env::set_current_dir(install_dir).context("Failed to chdir to /opt/server_manager")?;
 
@@ -208,33 +203,28 @@ async fn run_install() -> Result<()> {
     let config = config::Config::load()?;
 
     // 2. Hardware Detection
-    let hw = hardware::HardwareInfo::detect();
+    let hw = hardware::HardwareInfo::detect(runtime);
 
     // 3. System Dependencies & Optimization
-    system::install_dependencies()?;
-    system::apply_optimizations(&hw)?;
+    runtime.install_dependencies()?;
+    runtime.apply_optimizations(&hw)?;
 
     // 4. Firewall
-    firewall::configure()?;
+    runtime.configure_firewall()?;
 
     // 5. Docker
-    docker::install()?;
+    runtime.install()?;
 
     // 6. Initialize Services
-    configure_services(&hw, &secrets, &config)?;
-    initialize_services(&hw, &secrets, &config)?;
+    configure_services(runtime, &hw, &secrets, &config)?;
+    initialize_services(runtime, &hw, &secrets, &config)?;
 
     // 7. Generate Compose
-    generate_compose(&hw, &secrets, &config).await?;
+    generate_compose(runtime, &hw, &secrets, &config).await?;
 
     // 8. Launch
     info!("Launching Services via Docker Compose...");
-    let status = Command::new("docker")
-        .args(["compose", "up", "-d", "--remove-orphans"])
-        .status()
-        .context("Failed to run docker compose up")?;
-
-    if status.success() {
+    if runtime.run_compose_up().is_ok() {
         info!("Server Manager Stack Deployed Successfully! 🚀");
         print_deployment_summary(&secrets);
     } else {
@@ -274,8 +264,8 @@ fn print_deployment_summary(secrets: &secrets::Secrets) {
     println!("NOTE: Replace <IP> with your server's IP address.");
 }
 
-fn run_status() {
-    let hw = hardware::HardwareInfo::detect();
+fn run_status(runtime: &LinuxRuntime) {
+    let hw = hardware::HardwareInfo::detect(runtime);
     println!("=== System Status ===");
     println!("RAM: {} GB", hw.ram_gb);
     println!("Swap: {} GB", hw.swap_gb);
@@ -286,53 +276,53 @@ fn run_status() {
     println!("Intel QuickSync: {}", hw.has_intel_quicksync);
 
     println!("\n=== Docker Status ===");
-    if let Ok(true) = Command::new("docker").arg("ps").status().map(|s| s.success()) {
-         println!("Docker is running.");
+    if runtime.is_installed() {
+         println!("Docker is installed.");
     } else {
-         println!("Docker is NOT running.");
+         println!("Docker is NOT installed.");
     }
 }
 
-async fn run_generate() -> Result<()> {
-    let hw = hardware::HardwareInfo::detect();
+async fn run_generate(runtime: &LinuxRuntime) -> Result<()> {
+    let hw = hardware::HardwareInfo::detect(runtime);
     // For generate, we might not be in /opt/server_manager, but let's try to load secrets from CWD.
     // We propagate the error because generating a compose file with empty passwords is bad.
     let secrets = secrets::Secrets::load_or_create("secrets.yaml").context("Failed to load or create secrets.yaml")?;
     let config = config::Config::load()?;
-    configure_services(&hw, &secrets, &config)?;
-    generate_compose(&hw, &secrets, &config).await
+    configure_services(runtime, &hw, &secrets, &config)?;
+    generate_compose(runtime, &hw, &secrets, &config).await
 }
 
-fn configure_services(hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
+fn configure_services(runtime: &LinuxRuntime, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
     info!("Configuring services (generating config files)...");
     let services = services::get_all_services();
     for service in services {
         if !config.is_enabled(service.name()) {
             continue;
         }
-        service.configure(hw, secrets).with_context(|| format!("Failed to configure service: {}", service.name()))?;
+        service.configure(runtime, hw, secrets).with_context(|| format!("Failed to configure service: {}", service.name()))?;
     }
     Ok(())
 }
 
-fn initialize_services(hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
+fn initialize_services(runtime: &LinuxRuntime, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
     info!("Initializing services (system setup)...");
     let services = services::get_all_services();
     for service in services {
         if !config.is_enabled(service.name()) {
             continue;
         }
-        service.initialize(hw, secrets).with_context(|| format!("Failed to initialize service: {}", service.name()))?;
+        service.initialize(runtime, hw, secrets).with_context(|| format!("Failed to initialize service: {}", service.name()))?;
     }
     Ok(())
 }
 
-async fn generate_compose(hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
+async fn generate_compose(runtime: &LinuxRuntime, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
     info!("Generating docker-compose.yml based on hardware profile...");
     let top_level = build_compose_structure(hw, secrets, config)?;
     let yaml_output = serde_yaml_ng::to_string(&top_level)?;
 
-    fs::write("docker-compose.yml", yaml_output).context("Failed to write docker-compose.yml")?;
+    runtime.write_file(std::path::Path::new("docker-compose.yml"), &yaml_output).context("Failed to write docker-compose.yml")?;
     info!("docker-compose.yml generated.");
 
     Ok(())
