@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use anyhow::{Result, Context, anyhow};
 use log::{info, warn};
 use bcrypt::{DEFAULT_COST, hash, verify};
@@ -25,6 +25,8 @@ pub struct User {
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct UserManager {
     users: HashMap<String, User>,
+    #[serde(skip)]
+    file_path: Option<PathBuf>,
 }
 
 impl UserManager {
@@ -56,6 +58,14 @@ impl UserManager {
             UserManager::default()
         };
 
+        // Determine save path
+        let save_path = if Path::new("/opt/server_manager").exists() {
+             Path::new("/opt/server_manager/users.yaml")
+        } else {
+             Path::new("users.yaml")
+        };
+        manager.file_path = Some(save_path.to_path_buf());
+
         // Ensure default admin exists if no users
         if manager.users.is_empty() {
             info!("No users found. Creating default 'admin' user.");
@@ -81,9 +91,14 @@ impl UserManager {
         Ok(manager)
     }
 
+    pub fn set_file_path<P: AsRef<Path>>(&mut self, path: P) {
+        self.file_path = Some(path.as_ref().to_path_buf());
+    }
+
     pub fn save(&self) -> Result<()> {
-        // Prefer saving to /opt/server_manager if it exists/is writable, else CWD
-        let target = if Path::new("/opt/server_manager").exists() {
+        let target = if let Some(ref p) = self.file_path {
+            p.as_path()
+        } else if Path::new("/opt/server_manager").exists() {
              Path::new("/opt/server_manager/users.yaml")
         } else {
              Path::new("users.yaml")
@@ -146,6 +161,29 @@ impl UserManager {
 
         self.users.remove(username);
         self.save()
+    }
+
+    pub fn update_role(&mut self, _runtime: &dyn SystemRuntime, username: &str, new_role: Role) -> Result<()> {
+        // Check if user exists and if we are demoting the last admin
+        if let Some(user) = self.users.get(username) {
+            if user.role == Role::Admin && new_role != Role::Admin {
+                let admin_count = self.users.values().filter(|u| u.role == Role::Admin).count();
+                if admin_count <= 1 {
+                    return Err(anyhow!("Cannot demote the last admin user"));
+                }
+            }
+        } else {
+            return Err(anyhow!("User not found"));
+        }
+
+        // Update role
+        if let Some(user) = self.users.get_mut(username) {
+            user.role = new_role;
+            self.save()
+        } else {
+            // Should be unreachable as we checked existence above
+            Err(anyhow!("User not found"))
+        }
     }
 
     pub fn update_password(&mut self, runtime: &dyn SystemRuntime, username: &str, new_password: &str) -> Result<()> {

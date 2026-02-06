@@ -155,6 +155,9 @@ sudo server_manager user list
 # Change user password
 sudo server_manager user passwd john
 
+# Change user role
+sudo server_manager user role john Observer
+
 # Delete user (removes system account and data)
 sudo server_manager user delete john
 ```

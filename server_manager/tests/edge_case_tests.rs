@@ -406,8 +406,43 @@ fn test_user_deletion_protections() {
 
 #[test]
 fn test_user_role_changes() {
-    // Test changing user roles
-    // (Not currently implemented, but should be)
+    let mut manager = UserManager::default();
+    // Use a temp file to avoid polluting source tree
+    let temp_dir = std::env::temp_dir();
+    let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+    let temp_file = temp_dir.join(format!("users_test_{}.yaml", timestamp));
+    manager.set_file_path(&temp_file);
+
+    let runtime = MockRuntime::default();
+
+    // Setup initial users
+    manager.add_user(&runtime, "admin", "password", Role::Admin, None).unwrap();
+    manager.add_user(&runtime, "observer", "password", Role::Observer, None).unwrap();
+
+    // 1. Promote Observer to Admin
+    assert!(manager.update_role(&runtime, "observer", Role::Admin).is_ok());
+    let user = manager.get_user("observer").unwrap();
+    assert_eq!(user.role, Role::Admin);
+
+    // 2. Demote Admin (was observer) to Observer
+    assert!(manager.update_role(&runtime, "observer", Role::Observer).is_ok());
+    let user = manager.get_user("observer").unwrap();
+    assert_eq!(user.role, Role::Observer);
+
+    // 3. Try to demote the last remaining Admin
+    assert!(manager.update_role(&runtime, "admin", Role::Observer).is_err());
+
+    // 4. Add another admin, then demote original admin
+    manager.add_user(&runtime, "admin2", "password", Role::Admin, None).unwrap();
+    assert!(manager.update_role(&runtime, "admin", Role::Observer).is_ok());
+
+    // 5. Try to change role of non-existent user
+    assert!(manager.update_role(&runtime, "ghost", Role::Admin).is_err());
+
+    // Cleanup
+    if temp_file.exists() {
+        std::fs::remove_file(temp_file).ok();
+    }
 }
 
 // ============================================================================

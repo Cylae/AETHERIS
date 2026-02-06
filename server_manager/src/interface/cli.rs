@@ -57,6 +57,11 @@ pub enum UserCommands {
     List,
     /// Change user password
     Passwd { username: String },
+    /// Change user role
+    Role {
+        username: String,
+        role: String, // "Admin" or "Observer"
+    },
 }
 
 /// Securely reads a password from stdin without echoing characters.
@@ -131,6 +136,21 @@ fn run_user_management(runtime: &LinuxRuntime, action: UserCommands) -> Result<(
 
             user_manager.update_password(runtime, &username, &password)?;
             info!("Password for '{}' updated successfully.", username);
+        }
+        UserCommands::Role { username, role } => {
+            // Check existence first
+            if user_manager.get_user(&username).is_none() {
+                return Err(anyhow::anyhow!("User not found"));
+            }
+
+            let role_enum = match role.to_lowercase().as_str() {
+                "admin" => users::Role::Admin,
+                "observer" => users::Role::Observer,
+                _ => return Err(anyhow::anyhow!("Invalid role. Use 'Admin' or 'Observer'")),
+            };
+
+            user_manager.update_role(runtime, &username, role_enum)?;
+            info!("Role for '{}' updated to '{}'.", username, role);
         }
     }
     Ok(())
