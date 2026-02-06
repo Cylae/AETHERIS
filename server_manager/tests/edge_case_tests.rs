@@ -64,7 +64,6 @@ fn test_extremely_long_password() {
 #[test]
 fn test_config_malformed_yaml() {
     use std::fs;
-    use std::path::Path;
 
     // Create malformed config
     let test_config_path = "/tmp/test_config_malformed.yaml";
@@ -176,7 +175,7 @@ fn test_sql_injection_in_secrets() {
     };
 
     // Build compose structure - should properly escape
-    let compose = build_compose_structure(&hw, &secrets, &Config::default()).unwrap();
+    let _compose = build_compose_structure(&hw, &secrets, &Config::default()).unwrap();
 
     // Verify MariaDB init script escapes properly
     // (This would require inspecting generated init.sql)
@@ -189,20 +188,21 @@ fn test_sql_injection_in_secrets() {
 #[tokio::test]
 async fn test_concurrent_config_updates() {
     use tokio::task::JoinSet;
-    use std::sync::Arc;
 
     let mut tasks = JoinSet::new();
 
     // Spawn 100 tasks trying to update config simultaneously
     for i in 0..100 {
         tasks.spawn(async move {
-            let mut config = Config::load().unwrap_or_default();
+            let mut config = tokio::task::spawn_blocking(|| Config::load().unwrap_or_default())
+                .await
+                .unwrap_or_else(|_| Config::default());
             if i % 2 == 0 {
                 config.disable_service("plex");
             } else {
                 config.enable_service("plex");
             }
-            config.save().ok();
+            let _ = tokio::task::spawn_blocking(move || config.save()).await;
         });
     }
 
@@ -210,7 +210,9 @@ async fn test_concurrent_config_updates() {
     while let Some(_) = tasks.join_next().await {}
 
     // Final config should be consistent (not corrupted)
-    let final_config = Config::load().unwrap();
+    let _final_config = tokio::task::spawn_blocking(|| Config::load().unwrap())
+        .await
+        .unwrap();
     // Should be either enabled or disabled, not in inconsistent state
 }
 
@@ -264,7 +266,7 @@ fn test_compose_generation_with_all_services_disabled() {
 
 #[test]
 fn test_compose_generation_with_gpu_but_no_transcoding_services() {
-    let mut hw = HardwareInfo {
+    let hw = HardwareInfo {
         profile: HardwareProfile::High,
         ram_gb: 32,
         cpu_cores: 16,
