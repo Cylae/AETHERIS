@@ -1,0 +1,18 @@
+--- a/server_manager/Cargo.toml
++++ b/server_manager/Cargo.toml
+@@ -1,6 +1,6 @@
+ [package]
+ name = "server_manager"
+-version = "1.0.4"
++version = "1.0.5"
+ edition = "2021"
+ 
+ [dependencies]
+@@ -21,6 +21,7 @@ tower-http = { version = "0.5", features = ["fs", "trace"] }
+ bcrypt = "0.15"
+ tower-sessions = "0.12"
+ time = "0.3"
++rpassword = "7.3"
+ 
+ [dev-dependencies]
+ criterion = "0.5"
