@@ -258,6 +258,7 @@ fn print_deployment_summary(secrets: &secrets::Secrets) {
     // Helper to format Option<String>
     let pass = |opt: &Option<String>| opt.clone().unwrap_or_else(|| "ERROR".to_string());
 
+    print_row("Server UI", "http://<IP>:8099", "admin", "Generated (see log above)");
     print_row("Nginx Proxy", "http://<IP>:81", "admin@example.com", "changeme");
     print_row("Portainer", "http://<IP>:9000", "admin", "Set on first login");
     print_row("Nextcloud", "https://<IP>:4443", "admin", &pass(&secrets.nextcloud_admin_password));

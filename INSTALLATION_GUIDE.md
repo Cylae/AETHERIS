@@ -15,6 +15,12 @@
 - **Status:** FIXED in this release
 - **Solution:** Secure password input using `rpassword` crate
 
+**Insecure Default Credentials**
+- **Issue:** Default `admin`/`admin` credentials were used for initial login
+- **Impact:** HIGH - Unauthorized access risk
+- **Status:** FIXED in this release
+- **Solution:** Switched to randomly generated initial admin password logged during installation
+
 ---
 
 ## 📦 What's Inside This Archive
@@ -98,6 +104,7 @@ cargo test --verbose
 ✅ Secure password handling with rpassword crate  
 ✅ No password echo in terminal  
 ✅ No passwords in shell history  
+✅ FIXED: Insecure default credentials (randomly generated instead)
 
 ### Testing (Priority 2)
 ✅ 20+ new edge case tests  

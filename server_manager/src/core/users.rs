@@ -59,16 +59,10 @@ impl UserManager {
 
         // Ensure default admin exists if no users
         if manager.users.is_empty() {
-            info!("No users found. Creating default 'admin' user.");
-            // We use a generated secret for the initial password if secrets exist,
-            // otherwise generate one.
-            // Better: use 'admin' / 'admin' but WARN, or generate random.
-            // Let's generate a random one and print it, safer.
-            // Re-using secrets generation logic if possible, or just simple random.
-            // For simplicity in this context, let's look for a stored password or default to 'admin' and log a warning.
+            info!("No users found. Creating default 'admin' user with random password.");
 
-            let pass = "admin";
-            let hash = hash(pass, DEFAULT_COST)?;
+            let pass = crate::core::secrets::generate_hex(8).unwrap_or_else(|_| "admin_fallback_123".to_string());
+            let hash = hash(&pass, DEFAULT_COST)?;
             manager.users.insert("admin".to_string(), User {
                 username: "admin".to_string(),
                 password_hash: hash,
@@ -76,7 +70,12 @@ impl UserManager {
                 quota_gb: None,
             });
             manager.save()?;
-            info!("Default user 'admin' created with password 'admin'. CHANGE THIS IMMEDIATELY!");
+
+            info!("********************************************************************************");
+            info!("* SECURITY: Default user 'admin' created with RANDOM password:                *");
+            info!("* PASSWORD: {:<66} *", pass);
+            info!("* PLEASE RECORD THIS AND CHANGE IT IMMEDIATELY AFTER LOGIN!                    *");
+            info!("********************************************************************************");
         }
 
         Ok(manager)

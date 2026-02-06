@@ -173,9 +173,9 @@ sudo server_manager user delete john
 
 2. Open browser to `http://YOUR-SERVER-IP:8099`
 
-3. Login with default credentials:
+3. Login with credentials:
    - **Username**: `admin`
-   - **Password**: `admin`
+   - **Password**: (Randomly generated on first run - check installation logs)
    - **⚠️ CHANGE IMMEDIATELY AFTER FIRST LOGIN**
 
 ### Features
@@ -262,7 +262,7 @@ sudo server_manager user delete john
 ### Security Recommendations
 
 ```bash
-# 1. Change default admin password immediately
+# 1. Change the generated admin password immediately
 sudo server_manager user passwd admin
 
 # 2. Configure SSL in Nginx Proxy Manager
