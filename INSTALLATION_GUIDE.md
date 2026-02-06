@@ -367,6 +367,7 @@ This release completely mitigates the vulnerability by:
 # Clone the repository first
 git clone -b server-setup-script https://github.com/Cylae/server_script.git
 cd server_script
+git checkout 721b5456fa417b5711fd55cf5ddb0d8bebb9597e  # Verify integrity
 # Then run install.sh
 ```
 

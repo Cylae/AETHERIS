@@ -4,6 +4,10 @@
 
 set -euo pipefail
 
+# Security: Verified commit hash for repository integrity
+# This ensures the script clones a specific, audited version of the code
+VERIFIED_COMMIT="721b5456fa417b5711fd55cf5ddb0d8bebb9597e" # v1.0.5 Release
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_FILE="$SCRIPT_DIR/install.log"
 
@@ -66,7 +70,8 @@ else
         REPO_DIR="$HOME/server_script"
         log "Cloning repository..."
         git clone -b server-setup-script https://github.com/Cylae/server_script.git "$REPO_DIR"
-        log "✓ Repository cloned"
+        (cd "$REPO_DIR" && git checkout "$VERIFIED_COMMIT")
+        log "✓ Repository cloned and verified at commit $VERIFIED_COMMIT"
     else
         error "Installation cancelled. Please clone the repository first."
         exit 1

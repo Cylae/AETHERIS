@@ -89,7 +89,9 @@ source $HOME/.cargo/env
 
 # 2. Clone repository
 git clone https://github.com/Cylae/server_script
-cd server_script/server_manager
+cd server_script
+git checkout 721b5456fa417b5711fd55cf5ddb0d8bebb9597e  # Verify integrity
+cd server_manager
 
 # 3. Build release binary
 cargo build --release
@@ -474,7 +476,8 @@ RUST_LOG=debug sudo server_manager install
 
 ```bash
 cd /opt/server_manager_source
-git pull
+git fetch
+git checkout 721b5456fa417b5711fd55cf5ddb0d8bebb9597e  # Verify integrity
 cd server_manager
 cargo build --release
 sudo systemctl restart server_manager
