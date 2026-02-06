@@ -161,7 +161,7 @@ log "✓ Dependencies updated"
 
 # 6. Run tests
 log "Running test suite..."
-if cargo test --verbose 2>&1 | tee -a "$LOG_FILE"; then
+if cargo test --release --verbose 2>&1 | tee -a "$LOG_FILE"; then
     log "✓ All tests passed"
 else
     warning "Some tests failed. Review $LOG_FILE for details."
