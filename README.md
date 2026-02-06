@@ -35,7 +35,14 @@
 The easiest way to deploy Server Manager on a fresh Linux system:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/Cylae/server_script/server-setup-script/setup.sh | sudo bash
+# 1. Download the setup script
+curl -sLO https://raw.githubusercontent.com/Cylae/server_script/server-setup-script/setup.sh
+
+# 2. Inspect the script for security
+less setup.sh
+
+# 3. Run the installer
+sudo bash setup.sh
 ```
 
 **What this does:**
