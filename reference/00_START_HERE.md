@@ -196,8 +196,8 @@ After PR is merged, track:
 **Solution:** 
 ```bash
 cargo clean
-cargo update
-cargo test --verbose -- --nocapture
+cargo fetch --locked
+cargo test --verbose --locked -- --nocapture
 ```
 
 ### "I made a mistake in my commits"

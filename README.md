@@ -92,7 +92,7 @@ git clone https://github.com/Cylae/server_script
 cd server_script/server_manager
 
 # 3. Build release binary
-cargo build --release
+cargo build --release --locked
 
 # 4. Install system-wide
 sudo cp target/release/server_manager /usr/local/bin/
@@ -106,7 +106,7 @@ sudo server_manager install
 ```bash
 # Run comprehensive test suite
 cd server_manager
-cargo test --verbose
+cargo test --verbose --locked
 
 # Run benchmarks
 cargo bench
@@ -476,7 +476,7 @@ RUST_LOG=debug sudo server_manager install
 cd /opt/server_manager_source
 git pull
 cd server_manager
-cargo build --release
+cargo build --release --locked
 sudo systemctl restart server_manager
 ```
 
@@ -496,10 +496,10 @@ docker compose up -d
 
 ```bash
 # Unit tests
-cargo test
+cargo test --locked
 
 # Integration tests
-cargo test --test integration_tests
+cargo test --test integration_tests --locked
 
 # Benchmarks
 cargo bench
@@ -562,8 +562,8 @@ server_manager/
 
 3. Test and rebuild:
    ```bash
-   cargo test
-   cargo build --release
+   cargo test --locked
+   cargo build --release --locked
    ```
 
 ---

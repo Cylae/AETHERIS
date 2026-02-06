@@ -80,7 +80,7 @@ patch -p1 < /path/to/patches/002-cargo-dependency.patch
 
 # 4. Update dependencies
 cd server_manager
-cargo update
+cargo fetch --locked
 
 # 5. Build
 cargo build --release
@@ -230,7 +230,7 @@ Complete documentation package for creating GitHub PR:
    - Applies security fixes
 
 4. **Updates Dependencies**
-   - Runs `cargo update`
+   - Runs `cargo fetch --locked`
    - Downloads rpassword crate
 
 5. **Runs Tests**
@@ -387,8 +387,8 @@ sudo bash install.sh
 ```bash
 # Clean and rebuild
 cargo clean
-cargo update
-cargo test --verbose
+cargo fetch --locked
+cargo test --verbose --locked
 ```
 
 **5. "Patch already applied"**

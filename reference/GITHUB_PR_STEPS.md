@@ -129,7 +129,7 @@ cp /path/to/downloaded/TEST_ANALYSIS.md docs/
 cd server_manager
 
 # 1. Update dependencies
-cargo update
+cargo fetch --locked
 
 # 2. Check formatting
 cargo fmt --check

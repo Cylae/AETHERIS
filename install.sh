@@ -153,15 +153,17 @@ if [ -d "$SCRIPT_DIR/docs" ]; then
     log "✓ Updated documentation files"
 fi
 
-# 5. Update dependencies
-log "Updating Rust dependencies..."
+# 5. Verify dependencies
+log "Verifying Rust dependencies..."
 cd server_manager
-cargo update 2>&1 | tee -a "$LOG_FILE"
-log "✓ Dependencies updated"
+# Using --locked ensures we respect the exact versions in Cargo.lock
+# and avoid aggressive/unvetted updates from 'cargo update'
+cargo fetch --locked 2>&1 | tee -a "$LOG_FILE"
+log "✓ Dependencies verified"
 
 # 6. Run tests
 log "Running test suite..."
-if cargo test --verbose 2>&1 | tee -a "$LOG_FILE"; then
+if cargo test --verbose --locked 2>&1 | tee -a "$LOG_FILE"; then
     log "✓ All tests passed"
 else
     warning "Some tests failed. Review $LOG_FILE for details."
@@ -169,7 +171,7 @@ fi
 
 # 7. Build release version
 log "Building optimized release version..."
-if cargo build --release 2>&1 | tee -a "$LOG_FILE"; then
+if cargo build --release --locked 2>&1 | tee -a "$LOG_FILE"; then
     log "✓ Release build successful"
     BINARY_PATH="$(pwd)/target/release/server_manager"
     log "Binary location: $BINARY_PATH"
