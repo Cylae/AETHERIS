@@ -196,7 +196,6 @@ After PR is merged, track:
 **Solution:** 
 ```bash
 cargo clean
-cargo update
 cargo test --verbose -- --nocapture
 ```
 

@@ -153,21 +153,16 @@ if [ -d "$SCRIPT_DIR/docs" ]; then
     log "✓ Updated documentation files"
 fi
 
-# 5. Update dependencies
-log "Updating Rust dependencies..."
-cd server_manager
-cargo update 2>&1 | tee -a "$LOG_FILE"
-log "✓ Dependencies updated"
-
-# 6. Run tests
+# 5. Run tests
 log "Running test suite..."
+cd server_manager
 if cargo test --verbose 2>&1 | tee -a "$LOG_FILE"; then
     log "✓ All tests passed"
 else
     warning "Some tests failed. Review $LOG_FILE for details."
 fi
 
-# 7. Build release version
+# 6. Build release version
 log "Building optimized release version..."
 if cargo build --release 2>&1 | tee -a "$LOG_FILE"; then
     log "✓ Release build successful"
@@ -188,7 +183,7 @@ log "Server Manager v1.0.5 has been installed with the following improvements:"
 echo ""
 echo "  ✅ Critical security fix: Secure password input"
 echo "  ✅ Version updated: 1.0.4 → 1.0.5"
-echo "  ✅ Dependencies updated (rpassword = 7.3)"
+echo "  ✅ New dependencies added (rpassword = 7.3)"
 echo "  ✅ Documentation updated to production standards"
 echo "  ✅ Edge case tests added (+20 tests)"
 echo ""

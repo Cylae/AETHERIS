@@ -128,34 +128,31 @@ cp /path/to/downloaded/TEST_ANALYSIS.md docs/
 ```bash
 cd server_manager
 
-# 1. Update dependencies
-cargo update
-
-# 2. Check formatting
+# 1. Check formatting
 cargo fmt --check
 
-# 3. Run clippy
+# 2. Run clippy
 cargo clippy -- -D warnings
 
-# 4. Run all tests
+# 3. Run all tests
 cargo test --verbose
 
-# 5. Build release version
+# 4. Build release version
 cargo build --release
 
-# 6. Manual test - password input (IMPORTANT)
+# 5. Manual test - password input (IMPORTANT)
 sudo ./target/release/server_manager user add testuser --role Observer
 # Type a password - characters should NOT be visible
 # Press Enter
 
-# 7. Verify user created
+# 6. Verify user created
 sudo ./target/release/server_manager user list
 # Should show testuser
 
-# 8. Clean up
+# 7. Clean up
 sudo ./target/release/server_manager user delete testuser
 
-# 9. If all tests pass, proceed to commit
+# 8. If all tests pass, proceed to commit
 ```
 
 ## 💾 Step 5: Commit Changes

@@ -59,7 +59,6 @@ sudo bash install.sh
 #   - Detect your existing installation
 #   - Create a backup
 #   - Apply patches
-#   - Update dependencies
 #   - Run tests
 #   - Build release binary
 ```
@@ -78,14 +77,11 @@ cd /path/to/server_script  # or /opt/server_manager_source
 patch -p1 < /path/to/patches/002-cargo-dependency.patch
 # Review and apply 001-security-password-input.patch manually
 
-# 4. Update dependencies
+# 4. Build
 cd server_manager
-cargo update
-
-# 5. Build
 cargo build --release
 
-# 6. Test
+# 5. Test
 cargo test --verbose
 ```
 
@@ -229,15 +225,11 @@ Complete documentation package for creating GitHub PR:
    - Updates version to 1.0.5
    - Applies security fixes
 
-4. **Updates Dependencies**
-   - Runs `cargo update`
-   - Downloads rpassword crate
-
-5. **Runs Tests**
+4. **Runs Tests**
    - Executes full test suite
    - Logs results
 
-6. **Builds Release**
+5. **Builds Release**
    - Optimized release build
    - Reports binary location
 
@@ -387,7 +379,6 @@ sudo bash install.sh
 ```bash
 # Clean and rebuild
 cargo clean
-cargo update
 cargo test --verbose
 ```
 
