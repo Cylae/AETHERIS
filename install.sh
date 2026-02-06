@@ -1,5 +1,5 @@
 #!/bin/bash
-# Server Manager v1.0.5 - Security Fix & Quality Improvement Installer
+# AETHERIS v1.0.5 - Security Fix & Quality Improvement Installer
 # This script applies all Priority 1-3 improvements to an existing installation
 
 set -euo pipefail
@@ -47,17 +47,17 @@ banner
 echo ""
 
 # Detect installation method
-if [ -d "/opt/server_manager_source" ]; then
-    REPO_DIR="/opt/server_manager_source"
+if [ -d "/opt/aetheris_source" ]; then
+    REPO_DIR="/opt/aetheris_source"
     log "Found existing installation at: $REPO_DIR"
 elif [ -d "$HOME/server_script" ]; then
     REPO_DIR="$HOME/server_script"
     log "Found repository at: $REPO_DIR"
 else
-    error "Could not find existing Server Manager installation."
+    error "Could not find existing AETHERIS installation."
     echo ""
     echo "Expected locations:"
-    echo "  - /opt/server_manager_source"
+    echo "  - /opt/aetheris_source"
     echo "  - $HOME/server_script"
     echo ""
     echo "Would you like to clone the repository now? (y/n)"
@@ -85,19 +85,19 @@ log "✓ Backup created at: $BACKUP_DIR"
 log "Applying security patches..."
 
 # 1. Update Cargo.toml
-if [ -f "server_manager/Cargo.toml" ]; then
+if [ -f "aetheris/Cargo.toml" ]; then
     log "Updating Cargo.toml with security dependency..."
     
-    if grep -q "rpassword" server_manager/Cargo.toml; then
+    if grep -q "rpassword" aetheris/Cargo.toml; then
         warning "rpassword dependency already present"
     else
         # Add rpassword dependency after time dependency
-        sed -i '/^time = "0.3"/a rpassword = "7.3"  # SECURITY FIX: Secure password input' server_manager/Cargo.toml
+        sed -i '/^time = "0.3"/a rpassword = "7.3"  # SECURITY FIX: Secure password input' aetheris/Cargo.toml
         log "✓ Added rpassword dependency"
     fi
     
     # Update version
-    sed -i 's/version = "1.0.4"/version = "1.0.5"/' server_manager/Cargo.toml
+    sed -i 's/version = "1.0.4"/version = "1.0.5"/' aetheris/Cargo.toml
     log "✓ Updated version to 1.0.5"
 else
     error "Cargo.toml not found!"
@@ -105,21 +105,21 @@ else
 fi
 
 # 2. Apply CLI security patch
-if [ -f "server_manager/src/interface/cli.rs" ]; then
+if [ -f "aetheris/src/interface/cli.rs" ]; then
     log "Applying security fix to CLI..."
     
     # Check if already patched
-    if grep -q "rpassword::read_password" server_manager/src/interface/cli.rs; then
+    if grep -q "rpassword::read_password" aetheris/src/interface/cli.rs; then
         warning "Security fix already applied to CLI"
     else
         # Create patched version
         info "Applying password input security fix..."
         
         # Add import
-        sed -i '/^use std::io::{self, Write};/a use rpassword::read_password;' server_manager/src/interface/cli.rs
+        sed -i '/^use std::io::{self, Write};/a use rpassword::read_password;' aetheris/src/interface/cli.rs
         
         log "✓ Security fix applied to CLI"
-        warning "MANUAL STEP REQUIRED: Review server_manager/src/interface/cli.rs"
+        warning "MANUAL STEP REQUIRED: Review aetheris/src/interface/cli.rs"
         warning "Replace password input sections with read_password_securely() function"
         warning "See: $SCRIPT_DIR/patches/001-security-password-input.patch"
     fi
@@ -129,10 +129,10 @@ else
 fi
 
 # 3. Add new test file
-if [ ! -f "server_manager/tests/edge_case_tests.rs" ]; then
+if [ ! -f "aetheris/tests/edge_case_tests.rs" ]; then
     log "Adding comprehensive edge case tests..."
     if [ -f "$SCRIPT_DIR/tests/edge_case_tests.rs" ]; then
-        cp "$SCRIPT_DIR/tests/edge_case_tests.rs" server_manager/tests/
+        cp "$SCRIPT_DIR/tests/edge_case_tests.rs" aetheris/tests/
         log "✓ Added edge_case_tests.rs"
     else
         warning "edge_case_tests.rs not found in patch bundle"
@@ -155,7 +155,7 @@ fi
 
 # 5. Update dependencies
 log "Updating Rust dependencies..."
-cd server_manager
+cd aetheris
 cargo update 2>&1 | tee -a "$LOG_FILE"
 log "✓ Dependencies updated"
 
@@ -171,7 +171,7 @@ fi
 log "Building optimized release version..."
 if cargo build --release 2>&1 | tee -a "$LOG_FILE"; then
     log "✓ Release build successful"
-    BINARY_PATH="$(pwd)/target/release/server_manager"
+    BINARY_PATH="$(pwd)/target/release/aetheris"
     log "Binary location: $BINARY_PATH"
 else
     error "Build failed! Check $LOG_FILE for details."
@@ -184,7 +184,7 @@ log "╔════════════════════════
 log "║                     INSTALLATION COMPLETE                                ║"
 log "╚══════════════════════════════════════════════════════════════════════════╝"
 echo ""
-log "Server Manager v1.0.5 has been installed with the following improvements:"
+log "AETHERIS v1.0.5 has been installed with the following improvements:"
 echo ""
 echo "  ✅ Critical security fix: Secure password input"
 echo "  ✅ Version updated: 1.0.4 → 1.0.5"

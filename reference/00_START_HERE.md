@@ -111,7 +111,7 @@
    # Copy files per GITHUB_PR_STEPS.md
 
 # 5. Test:
-   cd server_manager
+   cd aetheris
    cargo test --verbose
    cargo build --release
 
@@ -141,9 +141,9 @@
 Before submitting PR, verify you have applied/added:
 
 ### Code Changes
-- [ ] `server_manager/Cargo.toml` - Added rpassword dependency
-- [ ] `server_manager/src/interface/cli.rs` - Secure password input
-- [ ] `server_manager/tests/edge_case_tests.rs` - New test suite
+- [ ] `aetheris/Cargo.toml` - Added rpassword dependency
+- [ ] `aetheris/src/interface/cli.rs` - Secure password input
+- [ ] `aetheris/tests/edge_case_tests.rs` - New test suite
 
 ### Documentation Changes
 - [ ] `README.md` - Replaced with updated version
@@ -245,11 +245,11 @@ By using this package, you will have:
 ✅ Updated documentation to production standards  
 ✅ Created deployment best practices guide  
 ✅ Improved code quality score by 31%  
-✅ Made Server Manager enterprise-ready  
+✅ Made AETHERIS enterprise-ready
 ✅ Contributed to open-source security  
 ✅ Learned GitHub PR workflow  
 
-**This is significant work.** Thank you for improving Server Manager!
+**This is significant work.** Thank you for improving AETHERIS!
 
 ---
 
@@ -300,12 +300,12 @@ The security fix is critical. The quality improvements are substantial. The docu
 
 **Take your time. Test thoroughly. Submit with confidence.**
 
-🚀 **Go make Server Manager better!** 🚀
+🚀 **Go make AETHERIS better!** 🚀
 
 ---
 
 *Package Created: 2026-02-06*  
-*Server Manager: v1.0.4 → v1.0.5*  
+*AETHERIS: v1.0.4 → v1.0.5*
 *Status: Ready for deployment*
 
 ---

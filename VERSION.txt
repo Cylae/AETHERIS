@@ -1,4 +1,4 @@
-Server Manager v1.0.5
+AETHERIS v1.0.5
 Security Fix & Quality Improvement Release
 
 Release Date: 2026-02-06

@@ -12,13 +12,13 @@
 
 - [ ] **P1: Change Default Credentials**
   ```bash
-  sudo server_manager user passwd admin
+  sudo aetheris user passwd admin
   # Set strong password (20+ chars, mixed case, numbers, symbols)
   ```
 
 - [ ] **P2: Secrets Backup**
   ```bash
-  sudo cp /opt/server_manager/secrets.yaml ~/secure_backup/
+  sudo cp /opt/aetheris/secrets.yaml ~/secure_backup/
   sudo chmod 600 ~/secure_backup/secrets.yaml
   ```
 
@@ -207,7 +207,7 @@
   ssh -L 19999:localhost:19999 user@YOUR-SERVER
   
   # Configure alarms
-  # Edit /opt/server_manager/config/netdata/health.d/
+  # Edit /opt/aetheris/config/netdata/health.d/
   ```
 
 - [ ] **Uptime Kuma Setup**
@@ -229,31 +229,31 @@
 
 - [ ] **Configuration Backup Script**
   ```bash
-  cat > /root/backup_server_manager.sh << 'EOF'
+  cat > /root/backup_aetheris.sh << 'EOF'
   #!/bin/bash
-  BACKUP_DIR="/root/backups/server_manager_$(date +%Y%m%d)"
+  BACKUP_DIR="/root/backups/aetheris_$(date +%Y%m%d)"
   mkdir -p "$BACKUP_DIR"
   
   # Backup configs
-  cp /opt/server_manager/secrets.yaml "$BACKUP_DIR/"
-  cp /opt/server_manager/config.yaml "$BACKUP_DIR/"
-  cp /opt/server_manager/users.yaml "$BACKUP_DIR/"
+  cp /opt/aetheris/secrets.yaml "$BACKUP_DIR/"
+  cp /opt/aetheris/config.yaml "$BACKUP_DIR/"
+  cp /opt/aetheris/users.yaml "$BACKUP_DIR/"
   
   # Backup service configs
-  tar -czf "$BACKUP_DIR/service_configs.tar.gz" /opt/server_manager/config/
+  tar -czf "$BACKUP_DIR/service_configs.tar.gz" /opt/aetheris/config/
   
   # Backup Plex metadata
-  tar -czf "$BACKUP_DIR/plex_metadata.tar.gz" /opt/server_manager/config/plex/
+  tar -czf "$BACKUP_DIR/plex_metadata.tar.gz" /opt/aetheris/config/plex/
   
   # Encrypt backup
   tar -czf - "$BACKUP_DIR" | openssl enc -aes-256-cbc -salt -out "$BACKUP_DIR.tar.gz.enc"
   rm -rf "$BACKUP_DIR"
   
   # Keep last 7 days
-  find /root/backups/ -name "server_manager_*.enc" -mtime +7 -delete
+  find /root/backups/ -name "aetheris_*.enc" -mtime +7 -delete
   EOF
   
-  chmod +x /root/backup_server_manager.sh
+  chmod +x /root/backup_aetheris.sh
   ```
 
 - [ ] **Schedule Daily Backups**
@@ -262,13 +262,13 @@
   crontab -e
   
   # Add line:
-  0 2 * * * /root/backup_server_manager.sh
+  0 2 * * * /root/backup_aetheris.sh
   ```
 
 - [ ] **Test Backup Restoration**
   ```bash
   # Decrypt test
-  openssl enc -d -aes-256-cbc -in /root/backups/server_manager_YYYYMMDD.tar.gz.enc -out test.tar.gz
+  openssl enc -d -aes-256-cbc -in /root/backups/aetheris_YYYYMMDD.tar.gz.enc -out test.tar.gz
   
   # Extract and verify
   tar -xzf test.tar.gz
@@ -278,7 +278,7 @@
 
 - [ ] **Verify Hardware Profile**
   ```bash
-  server_manager status
+  aetheris status
   # Confirm correct profile detected
   ```
 
@@ -296,7 +296,7 @@
 
 - [ ] **Optimize MariaDB** (if needed)
   ```bash
-  # Edit /opt/server_manager/config/mariadb/custom.cnf
+  # Edit /opt/aetheris/config/mariadb/custom.cnf
   # Adjust based on available RAM
   ```
 
@@ -310,10 +310,10 @@
 - [ ] **Create User Accounts**
   ```bash
   # For each user:
-  sudo server_manager user add username --quota 100 --role Observer
+  sudo aetheris user add username --quota 100 --role Observer
   
   # Save credentials securely
-  # Users stored in /opt/server_manager/users.yaml
+  # Users stored in /opt/aetheris/users.yaml
   ```
 
 - [ ] **Set Quotas**
@@ -391,7 +391,7 @@
 
 - [ ] **Run Full Test Suite**
   ```bash
-  cd /opt/server_manager_source/server_manager
+  cd /opt/aetheris_source/aetheris
   cargo test --verbose
   # All tests should pass
   ```
@@ -428,7 +428,7 @@
 - [ ] **Update README with Custom Settings**
   ```bash
   # Document any deviations from default setup
-  echo "# Custom Configuration" >> /opt/server_manager/CUSTOM_README.md
+  echo "# Custom Configuration" >> /opt/aetheris/CUSTOM_README.md
   ```
 
 - [ ] **Schedule Maintenance Window**

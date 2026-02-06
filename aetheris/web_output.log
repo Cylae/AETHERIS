@@ -1,0 +1,6 @@
+   Compiling aetheris_core v2.0.0 (/app/aetheris)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.93s
+     Running `target/debug/aetheris web --port 8099`
+[2026-02-06T21:03:39Z INFO  aetheris_core::interface::web] Starting Web UI on http://0.0.0.0:8099
+[2026-02-06T21:04:46Z INFO  tracing::span] call;
+[2026-02-06T21:04:46Z INFO  tracing::span] get_record;

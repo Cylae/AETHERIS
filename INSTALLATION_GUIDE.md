@@ -1,4 +1,4 @@
-# Server Manager v1.0.5 - Security Fix & Quality Improvement Package
+# AETHERIS v1.0.5 - Security Fix & Quality Improvement Package
 
 **Release Date:** 2026-02-06  
 **Package Type:** Security Patch + Quality Improvements  
@@ -20,7 +20,7 @@
 ## 📦 What's Inside This Archive
 
 ```
-server_manager_patch_v1.0.5/
+aetheris_patch_v1.0.5/
 ├── install.sh ........................ Automated installation script
 ├── VERSION.txt ....................... Version and release information
 ├── README.md ......................... Production-ready documentation
@@ -48,8 +48,8 @@ server_manager_patch_v1.0.5/
 
 ```bash
 # 1. Extract the archive
-tar -xzf server_manager_v1.0.5_security_fix.tar.gz
-cd server_manager_patch_v1.0.5
+tar -xzf aetheris_v1.0.5_security_fix.tar.gz
+cd aetheris_patch_v1.0.5
 
 # 2. Run the installer
 sudo bash install.sh
@@ -68,18 +68,18 @@ sudo bash install.sh
 
 ```bash
 # 1. Extract archive
-tar -xzf server_manager_v1.0.5_security_fix.tar.gz
-cd server_manager_patch_v1.0.5
+tar -xzf aetheris_v1.0.5_security_fix.tar.gz
+cd aetheris_patch_v1.0.5
 
-# 2. Navigate to your Server Manager repository
-cd /path/to/server_script  # or /opt/server_manager_source
+# 2. Navigate to your AETHERIS repository
+cd /path/to/server_script  # or /opt/aetheris_source
 
 # 3. Apply patches manually
 patch -p1 < /path/to/patches/002-cargo-dependency.patch
 # Review and apply 001-security-password-input.patch manually
 
 # 4. Update dependencies
-cd server_manager
+cd aetheris
 cargo update
 
 # 5. Build
@@ -207,7 +207,7 @@ Complete documentation package for creating GitHub PR:
 
 ### Prerequisites
 
-- Existing Server Manager installation (v1.0.4)
+- Existing AETHERIS installation (v1.0.4)
 - OR fresh clone of the repository
 - Rust toolchain (if building from source)
 - Root access (for system-level changes)
@@ -215,7 +215,7 @@ Complete documentation package for creating GitHub PR:
 ### What the Installer Does
 
 1. **Detects Installation**
-   - Checks `/opt/server_manager_source`
+   - Checks `/opt/aetheris_source`
    - Checks `~/server_script`
    - Offers to clone if not found
 
@@ -256,13 +256,13 @@ After running `install.sh`:
 
 2. **Test Password Input**
    ```bash
-   sudo /path/to/server_manager user add testuser --role Observer
+   sudo /path/to/aetheris user add testuser --role Observer
    # Characters should NOT be visible when typing password
    ```
 
 3. **Change Default Password**
    ```bash
-   sudo /path/to/server_manager user passwd admin
+   sudo /path/to/aetheris user passwd admin
    ```
 
 4. **Review Documentation**
@@ -276,7 +276,7 @@ After running `install.sh`:
 ### Automated Tests
 
 ```bash
-cd server_manager
+cd aetheris
 cargo test --verbose
 ```
 
@@ -286,7 +286,7 @@ cargo test --verbose
 
 ```bash
 # This is CRITICAL - verify password input is secure
-sudo ./target/release/server_manager user add sectest --role Observer
+sudo ./target/release/aetheris user add sectest --role Observer
 
 # When prompted for password:
 # ✅ Characters should NOT be visible
@@ -297,7 +297,7 @@ sudo ./target/release/server_manager user add sectest --role Observer
 history | tail -5  # Should NOT contain password
 
 # Clean up:
-sudo ./target/release/server_manager user delete sectest
+sudo ./target/release/aetheris user delete sectest
 ```
 
 ### Build Verification
@@ -308,11 +308,11 @@ cargo clean
 cargo build --release
 
 # Check binary
-ls -lh target/release/server_manager
+ls -lh target/release/aetheris
 
 # Verify version
-./target/release/server_manager --version
-# Should output: server_manager 1.0.5
+./target/release/aetheris --version
+# Should output: aetheris 1.0.5
 ```
 
 ---
@@ -346,7 +346,7 @@ let password = read_password()?;  // ✅ NO ECHO
 - **Privileges Required:** LOW
 - **User Interaction:** NONE
 
-**CVE Consideration:** This vulnerability is CVE-worthy if Server Manager is used in multi-user environments.
+**CVE Consideration:** This vulnerability is CVE-worthy if AETHERIS is used in multi-user environments.
 
 ### Mitigation
 

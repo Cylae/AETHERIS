@@ -1,8 +1,8 @@
---- a/server_manager/Cargo.toml
-+++ b/server_manager/Cargo.toml
+--- a/aetheris/Cargo.toml
++++ b/aetheris/Cargo.toml
 @@ -1,6 +1,6 @@
  [package]
- name = "server_manager"
+ name = "aetheris"
 -version = "1.0.4"
 +version = "1.0.5"
  edition = "2021"
