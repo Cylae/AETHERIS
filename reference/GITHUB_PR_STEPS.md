@@ -1,6 +1,6 @@
 # 🚀 Step-by-Step Guide: Creating the GitHub Pull Request
 
-This guide walks you through creating a pull request for the Server Manager security and quality improvements.
+This guide walks you through creating a pull request for the AETHERIS security and quality improvements.
 
 ## Prerequisites
 
@@ -65,7 +65,7 @@ git branch
 ### 3.1 Update Cargo.toml
 
 ```bash
-cd server_manager
+cd aetheris
 
 # Open Cargo.toml in your editor
 nano Cargo.toml  # or vim, code, etc.
@@ -126,7 +126,7 @@ cp /path/to/downloaded/TEST_ANALYSIS.md docs/
 ## ✅ Step 4: Test Changes Locally
 
 ```bash
-cd server_manager
+cd aetheris
 
 # 1. Update dependencies
 cargo update
@@ -144,16 +144,16 @@ cargo test --verbose
 cargo build --release
 
 # 6. Manual test - password input (IMPORTANT)
-sudo ./target/release/server_manager user add testuser --role Observer
+sudo ./target/release/aetheris user add testuser --role Observer
 # Type a password - characters should NOT be visible
 # Press Enter
 
 # 7. Verify user created
-sudo ./target/release/server_manager user list
+sudo ./target/release/aetheris user list
 # Should show testuser
 
 # 8. Clean up
-sudo ./target/release/server_manager user delete testuser
+sudo ./target/release/aetheris user delete testuser
 
 # 9. If all tests pass, proceed to commit
 ```
@@ -168,10 +168,10 @@ cd ..
 git status
 
 # Add all changed files
-git add server_manager/Cargo.toml
-git add server_manager/Cargo.lock  # Will be auto-updated
-git add server_manager/src/interface/cli.rs
-git add server_manager/tests/edge_case_tests.rs
+git add aetheris/Cargo.toml
+git add aetheris/Cargo.lock  # Will be auto-updated
+git add aetheris/src/interface/cli.rs
+git add aetheris/tests/edge_case_tests.rs
 git add README.md
 git add docs/PRODUCTION_CHECKLIST.md
 git add docs/TEST_ANALYSIS.md
@@ -402,4 +402,4 @@ If you encounter issues:
 
 **Good luck with your pull request!** 🚀
 
-This is a significant improvement to Server Manager's security and quality. The maintainers will appreciate the thorough work.
+This is a significant improvement to AETHERIS's security and quality. The maintainers will appreciate the thorough work.

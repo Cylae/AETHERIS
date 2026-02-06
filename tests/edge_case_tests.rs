@@ -3,11 +3,11 @@
 
 // File: tests/edge_case_tests.rs
 
-use server_manager::core::hardware::{HardwareInfo, HardwareProfile};
-use server_manager::core::secrets::Secrets;
-use server_manager::core::config::Config;
-use server_manager::core::users::{UserManager, Role};
-use server_manager::build_compose_structure;
+use aetheris_core::core::hardware::{HardwareInfo, HardwareProfile};
+use aetheris_core::core::secrets::Secrets;
+use aetheris_core::core::config::Config;
+use aetheris_core::core::users::{UserManager, Role};
+use aetheris_core::build_compose_structure;
 
 // ============================================================================
 // UNICODE AND SPECIAL CHARACTER TESTS
@@ -249,7 +249,7 @@ fn test_compose_generation_with_all_services_disabled() {
     let mut config = Config::default();
     
     // Disable ALL services
-    let services = server_manager::services::get_all_services();
+    let services = aetheris_core::services::get_all_services();
     for service in services {
         config.disable_service(service.name());
     }
@@ -259,7 +259,7 @@ fn test_compose_generation_with_all_services_disabled() {
     
     // Should generate valid (empty) compose file
     assert_eq!(compose.services.len(), 0);
-    assert!(compose.networks.contains_key("server_manager_net"));
+    assert!(compose.networks.contains_key("aetheris_net"));
 }
 
 #[test]
@@ -349,7 +349,7 @@ fn test_partial_service_deployment() {
 
 #[test]
 fn test_secrets_hex_generation_randomness() {
-    use server_manager::core::secrets::Secrets;
+    use aetheris_core::core::secrets::Secrets;
     use std::collections::HashSet;
     
     let mut seen = HashSet::new();

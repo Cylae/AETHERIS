@@ -1,8 +1,8 @@
-# Server Manager - Next-Gen Media Server Orchestrator 🚀
+# AETHERIS - Next-Gen Media Server Orchestrator 🚀
 
-![Server Manager Banner](https://img.shields.io/badge/Status-Production--Ready-brightgreen) ![Version](https://img.shields.io/badge/Version-1.0.4-blue) ![Rust](https://img.shields.io/badge/Built%20With-Rust-orange) ![Docker](https://img.shields.io/badge/Powered%20By-Docker-blue) ![Security](https://img.shields.io/badge/Security-Hardened-red)
+![AETHERIS Banner](https://img.shields.io/badge/Status-Production--Ready-brightgreen) ![Version](https://img.shields.io/badge/Version-1.0.4-blue) ![Rust](https://img.shields.io/badge/Built%20With-Rust-orange) ![Docker](https://img.shields.io/badge/Powered%20By-Docker-blue) ![Security](https://img.shields.io/badge/Security-Hardened-red)
 
-**Server Manager** is an intelligent, production-grade orchestrator written in Rust that deploys, manages, and optimizes a complete personal media and cloud server stack. It automatically detects your hardware and configures 28 Docker services for optimal performance.
+**AETHERIS** is an intelligent, production-grade orchestrator written in Rust that deploys, manages, and optimizes a complete personal media and cloud server stack. It automatically detects your hardware and configures 28 Docker services for optimal performance.
 
 ---
 
@@ -32,7 +32,7 @@
 
 ### One-Click Installation (Recommended)
 
-The easiest way to deploy Server Manager on a fresh Linux system:
+The easiest way to deploy AETHERIS on a fresh Linux system:
 
 ```bash
 curl -sL https://raw.githubusercontent.com/Cylae/server_script/server-setup-script/setup.sh | sudo bash
@@ -42,7 +42,7 @@ curl -sL https://raw.githubusercontent.com/Cylae/server_script/server-setup-scri
 1. Hardens system security (UFW, Fail2Ban)
 2. Configures filesystem quotas
 3. Installs Docker and Rust
-4. Compiles and deploys Server Manager
+4. Compiles and deploys AETHERIS
 5. Launches all 28 services
 
 **Time to complete**: 10-20 minutes (depending on hardware)
@@ -89,30 +89,30 @@ source $HOME/.cargo/env
 
 # 2. Clone repository
 git clone https://github.com/Cylae/server_script
-cd server_script/server_manager
+cd server_script/aetheris
 
 # 3. Build release binary
 cargo build --release
 
 # 4. Install system-wide
-sudo cp target/release/server_manager /usr/local/bin/
+sudo cp target/release/aetheris /usr/local/bin/
 
 # 5. Run installation
-sudo server_manager install
+sudo aetheris install
 ```
 
 ### Testing Before Deployment
 
 ```bash
 # Run comprehensive test suite
-cd server_manager
+cd aetheris
 cargo test --verbose
 
 # Run benchmarks
 cargo bench
 
 # Generate compose file only (no deployment)
-sudo server_manager generate
+sudo aetheris generate
 cat docker-compose.yml  # Inspect configuration
 ```
 
@@ -124,36 +124,36 @@ cat docker-compose.yml  # Inspect configuration
 
 ```bash
 # Full idempotent installation
-sudo server_manager install
+sudo aetheris install
 
 # Display detected hardware and profile
-server_manager status
+aetheris status
 
 # Generate docker-compose.yml without deploying
-sudo server_manager generate
+sudo aetheris generate
 
 # Enable/disable specific services
-sudo server_manager enable nextcloud
-sudo server_manager disable jellyfin
+sudo aetheris enable nextcloud
+sudo aetheris disable jellyfin
 
 # Start web administration interface
-sudo server_manager web --port 8099
+sudo aetheris web --port 8099
 ```
 
 ### User Management
 
 ```bash
 # Add new user with 50GB quota
-sudo server_manager user add john --quota 50 --role Admin
+sudo aetheris user add john --quota 50 --role Admin
 
 # List all users
-sudo server_manager user list
+sudo aetheris user list
 
 # Change user password
-sudo server_manager user passwd john
+sudo aetheris user passwd john
 
 # Delete user (removes system account and data)
-sudo server_manager user delete john
+sudo aetheris user delete john
 ```
 
 **User Roles:**
@@ -168,7 +168,7 @@ sudo server_manager user delete john
 
 1. Start the web server:
    ```bash
-   sudo server_manager web
+   sudo aetheris web
    ```
 
 2. Open browser to `http://YOUR-SERVER-IP:8099`
@@ -241,7 +241,7 @@ sudo server_manager user delete john
 2. **Password Management**
    - Bcrypt hashing (cost factor 12)
    - Auto-generated secrets (32-character hex)
-   - Stored in `/opt/server_manager/secrets.yaml` (600 permissions)
+   - Stored in `/opt/aetheris/secrets.yaml` (600 permissions)
 
 3. **Container Security**
    - `no-new-privileges` on sensitive services
@@ -263,7 +263,7 @@ sudo server_manager user delete john
 
 ```bash
 # 1. Change default admin password immediately
-sudo server_manager user passwd admin
+sudo aetheris user passwd admin
 
 # 2. Configure SSL in Nginx Proxy Manager
 # Access http://YOUR-IP:81
@@ -273,7 +273,7 @@ sudo server_manager user passwd admin
 # Map internal ports through Nginx with SSL
 
 # 4. Backup secrets.yaml
-sudo cp /opt/server_manager/secrets.yaml ~/backup/
+sudo cp /opt/aetheris/secrets.yaml ~/backup/
 
 # 5. Enable 2FA where supported (Nextcloud, Vaultwarden)
 ```
@@ -321,7 +321,7 @@ sudo cp /opt/server_manager/secrets.yaml ~/backup/
 ### Key Files
 
 ```
-/opt/server_manager/
+/opt/aetheris/
 ├── docker-compose.yml      # Generated service definitions
 ├── secrets.yaml            # Auto-generated passwords
 ├── config.yaml            # Enabled/disabled services
@@ -336,7 +336,7 @@ sudo cp /opt/server_manager/secrets.yaml ~/backup/
 ### Secrets Management
 
 ```yaml
-# /opt/server_manager/secrets.yaml
+# /opt/aetheris/secrets.yaml
 mysql_root_password: a1b2c3d4...
 mysql_user_password: e5f6g7h8...
 nextcloud_admin_password: i9j0k1l2...
@@ -345,8 +345,8 @@ nextcloud_admin_password: i9j0k1l2...
 
 **To regenerate secrets:**
 ```bash
-sudo rm /opt/server_manager/secrets.yaml
-sudo server_manager generate
+sudo rm /opt/aetheris/secrets.yaml
+sudo aetheris generate
 ```
 
 ---
@@ -383,23 +383,23 @@ docker compose logs -f
 # Specific service
 docker compose logs -f plex
 
-# Check server_manager logs
-journalctl -u server_manager -f
+# Check aetheris logs
+journalctl -u aetheris -f
 ```
 
 ### Backups
 
 ```bash
 # Backup configuration
-sudo tar -czf server_manager_backup.tar.gz \
-  /opt/server_manager/config.yaml \
-  /opt/server_manager/secrets.yaml \
-  /opt/server_manager/users.yaml \
-  /opt/server_manager/config/
+sudo tar -czf aetheris_backup.tar.gz \
+  /opt/aetheris/config.yaml \
+  /opt/aetheris/secrets.yaml \
+  /opt/aetheris/users.yaml \
+  /opt/aetheris/config/
 
 # Backup media metadata
 sudo tar -czf plex_metadata.tar.gz \
-  /opt/server_manager/config/plex/
+  /opt/aetheris/config/plex/
 ```
 
 ---
@@ -424,7 +424,7 @@ docker compose restart plex
 ```bash
 # Check disk usage
 df -h
-du -sh /opt/server_manager/*
+du -sh /opt/aetheris/*
 
 # Clean Docker
 docker system prune -af
@@ -463,27 +463,27 @@ docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
 
 ```bash
 # Enable verbose logging
-RUST_LOG=debug sudo server_manager install
+RUST_LOG=debug sudo aetheris install
 ```
 
 ---
 
 ## 🔄 Updating
 
-### Update Server Manager
+### Update AETHERIS
 
 ```bash
-cd /opt/server_manager_source
+cd /opt/aetheris_source
 git pull
-cd server_manager
+cd aetheris
 cargo build --release
-sudo systemctl restart server_manager
+sudo systemctl restart aetheris
 ```
 
 ### Update Services
 
 ```bash
-cd /opt/server_manager
+cd /opt/aetheris
 docker compose pull
 docker compose up -d
 ```
@@ -511,7 +511,7 @@ cargo tarpaulin --out Html
 ### Project Structure
 
 ```
-server_manager/
+aetheris/
 ├── src/
 │   ├── core/              # System-level operations
 │   │   ├── hardware.rs    # Hardware detection
@@ -627,6 +627,6 @@ This project is licensed under the MIT License.
 
 ---
 
-**Built with ❤️ by the Server Manager Team**
+**Built with ❤️ by the AETHERIS Team**
 
 *Last Updated: 2026-02-06 - Version 1.0.4*

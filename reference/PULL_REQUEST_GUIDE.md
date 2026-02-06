@@ -1,4 +1,4 @@
-# Pull Request Guide - Server Manager Security & Quality Improvements
+# Pull Request Guide - AETHERIS Security & Quality Improvements
 
 ## 📋 PR Overview
 
@@ -13,7 +13,7 @@
 
 ## 🎯 Summary
 
-This PR addresses critical security vulnerabilities, adds comprehensive test coverage, updates documentation to production standards, and provides deployment best practices for Server Manager v1.0.4 → v1.0.5.
+This PR addresses critical security vulnerabilities, adds comprehensive test coverage, updates documentation to production standards, and provides deployment best practices for AETHERIS v1.0.4 → v1.0.5.
 
 ### Key Changes
 
@@ -36,8 +36,8 @@ This PR addresses critical security vulnerabilities, adds comprehensive test cov
 **Fix:** Implemented secure password input using `rpassword` crate
 
 **Files Changed:**
-- `server_manager/Cargo.toml` - Added `rpassword = "7.3"`
-- `server_manager/src/interface/cli.rs` - Replaced insecure `stdin::read_line()` with `rpassword::read_password()`
+- `aetheris/Cargo.toml` - Added `rpassword = "7.3"`
+- `aetheris/src/interface/cli.rs` - Replaced insecure `stdin::read_line()` with `rpassword::read_password()`
 
 **Before:**
 ```rust
@@ -183,10 +183,10 @@ cargo tarpaulin --out Html
 ### Modified Files
 
 ```
-server_manager/Cargo.toml
+aetheris/Cargo.toml
   + Added rpassword = "7.3" dependency
 
-server_manager/src/interface/cli.rs
+aetheris/src/interface/cli.rs
   + Imported rpassword crate
   + Created read_password_securely() helper
   + Updated UserCommands::Add password input
@@ -204,7 +204,7 @@ README.md
 ### New Files
 
 ```
-server_manager/tests/edge_case_tests.rs
+aetheris/tests/edge_case_tests.rs
   + 20+ new test cases
   + Unicode/special char validation
   + Concurrent operation tests
@@ -253,14 +253,14 @@ Before merging, verify:
 
 ```bash
 # 1. Backup current installation
-sudo cp -r /opt/server_manager /opt/server_manager.backup
+sudo cp -r /opt/aetheris /opt/aetheris.backup
 
 # 2. Pull latest changes
-cd /opt/server_manager_source
+cd /opt/aetheris_source
 git pull origin server-setup-script
 
 # 3. Rebuild
-cd server_manager
+cd aetheris
 cargo build --release
 
 # 4. Restart services (optional)
@@ -268,7 +268,7 @@ docker compose down
 docker compose up -d
 
 # 5. Update admin password (REQUIRED if still using default)
-sudo server_manager user passwd admin
+sudo aetheris user passwd admin
 ```
 
 **Post-update actions:**
