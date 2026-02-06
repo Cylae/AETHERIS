@@ -3,9 +3,7 @@ use crate::core::hardware::{HardwareInfo, HardwareProfile};
 use crate::core::secrets::Secrets;
 use std::collections::HashMap;
 use anyhow::{Result, Context};
-use std::fs;
 use std::path::Path;
-use std::process::Command;
 
 pub struct MariaDBService;
 impl Service for MariaDBService {
@@ -13,9 +11,9 @@ impl Service for MariaDBService {
     fn image(&self) -> &'static str { "lscr.io/linuxserver/mariadb:latest" }
     fn ports(&self) -> Vec<String> { vec![] } // Internal only
 
-    fn configure(&self, hw: &HardwareInfo, secrets: &Secrets) -> Result<()> {
+    fn configure(&self, runtime: &dyn crate::core::runtime::SystemRuntime, hw: &HardwareInfo, secrets: &Secrets) -> Result<()> {
         let init_dir = Path::new("./config/mariadb/initdb.d");
-        fs::create_dir_all(init_dir).context("Failed to create mariadb initdb.d")?;
+        runtime.create_dir_all(init_dir).context("Failed to create mariadb initdb.d")?;
 
         let mut sql = String::new();
 
@@ -44,7 +42,7 @@ impl Service for MariaDBService {
 
         sql.push_str("FLUSH PRIVILEGES;\n");
 
-        fs::write(init_dir.join("init.sql"), sql).context("Failed to write init.sql")?;
+        runtime.write_file(&init_dir.join("init.sql"), &sql).context("Failed to write init.sql")?;
 
         // Optimization: Generate custom.cnf
         let (buffer_pool, log_file_size, max_connections) = match hw.profile {
@@ -61,7 +59,7 @@ max_connections={}
 
         // Parent dir is ./config/mariadb/
         let config_dir = init_dir.parent().context("Failed to determine parent directory for custom.cnf")?;
-        fs::write(config_dir.join("custom.cnf"), custom_cnf).context("Failed to write custom.cnf")?;
+        runtime.write_file(&config_dir.join("custom.cnf"), &custom_cnf).context("Failed to write custom.cnf")?;
 
         Ok(())
     }
@@ -125,12 +123,11 @@ impl Service for NginxProxyService {
     fn image(&self) -> &'static str { "jc21/nginx-proxy-manager:latest" }
     fn ports(&self) -> Vec<String> { vec!["80:80".to_string(), "81:81".to_string(), "443:443".to_string()] }
 
-    fn initialize(&self, _hw: &HardwareInfo, _secrets: &Secrets) -> Result<()> {
+    fn initialize(&self, runtime: &dyn crate::core::runtime::SystemRuntime, _hw: &HardwareInfo, _secrets: &Secrets) -> Result<()> {
         let services = vec!["apache2", "nginx", "httpd"];
         for svc in services {
             // Stop and disable conflicting web servers
-            let _ = Command::new("systemctl").args(["stop", svc]).status();
-            let _ = Command::new("systemctl").args(["disable", svc]).status();
+            let _ = runtime.stop_and_disable_service(svc);
         }
         Ok(())
     }

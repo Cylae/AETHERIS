@@ -5,8 +5,7 @@ use std::path::Path;
 use anyhow::{Result, Context, anyhow};
 use log::{info, warn};
 use bcrypt::{DEFAULT_COST, hash, verify};
-use crate::core::system;
-use nix::unistd::Uid;
+use crate::core::runtime::SystemRuntime;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Role {
@@ -95,7 +94,7 @@ impl UserManager {
         Ok(())
     }
 
-    pub fn add_user(&mut self, username: &str, password: &str, role: Role, quota_gb: Option<u64>) -> Result<()> {
+    pub fn add_user(&mut self, runtime: &dyn SystemRuntime, username: &str, password: &str, role: Role, quota_gb: Option<u64>) -> Result<()> {
         if self.users.contains_key(username) {
             return Err(anyhow!("User already exists"));
         }
@@ -106,10 +105,10 @@ impl UserManager {
         }
 
         // System User Integration
-        if Uid::effective().is_root() {
-            system::create_system_user(username, password)?;
+        if runtime.check_root().is_ok() {
+            runtime.create_system_user(username, password)?;
             if let Some(gb) = quota_gb {
-                system::set_system_quota(username, gb)?;
+                runtime.set_system_quota(username, gb)?;
             }
         } else {
             warn!("Not running as root. Skipping system user creation for '{}'.", username);
@@ -125,7 +124,7 @@ impl UserManager {
         self.save()
     }
 
-    pub fn delete_user(&mut self, username: &str) -> Result<()> {
+    pub fn delete_user(&mut self, runtime: &dyn SystemRuntime, username: &str) -> Result<()> {
         // Check if user exists and if it's the last admin
         if let Some(user) = self.users.get(username) {
             if user.role == Role::Admin {
@@ -139,8 +138,8 @@ impl UserManager {
         }
 
         // System User Deletion
-        if Uid::effective().is_root() {
-            system::delete_system_user(username)?;
+        if runtime.check_root().is_ok() {
+            runtime.delete_system_user(username)?;
         } else {
             warn!("Not running as root. Skipping system user deletion for '{}'.", username);
         }
@@ -149,11 +148,11 @@ impl UserManager {
         self.save()
     }
 
-    pub fn update_password(&mut self, username: &str, new_password: &str) -> Result<()> {
+    pub fn update_password(&mut self, runtime: &dyn SystemRuntime, username: &str, new_password: &str) -> Result<()> {
         if let Some(user) = self.users.get_mut(username) {
             // System Password Update
-            if Uid::effective().is_root() {
-                system::set_system_user_password(username, new_password)?;
+            if runtime.check_root().is_ok() {
+                runtime.set_system_user_password(username, new_password)?;
             } else {
                 warn!("Not running as root. Skipping system password update for '{}'.", username);
             }
@@ -204,13 +203,16 @@ impl UserManager {
 mod tests {
     use super::*;
 
+    use crate::core::runtime::MockRuntime;
+
     #[test]
     fn test_user_management() {
         let mut manager = UserManager::default();
+        let runtime = MockRuntime::default();
 
         // Add User
-        assert!(manager.add_user("testuser", "password123", Role::Observer, None).is_ok());
-        assert!(manager.add_user("testuser", "password123", Role::Observer, None).is_err()); // Duplicate
+        assert!(manager.add_user(&runtime, "testuser", "password123", Role::Observer, None).is_ok());
+        assert!(manager.add_user(&runtime, "testuser", "password123", Role::Observer, None).is_err()); // Duplicate
 
         // Verify
         let user = manager.verify("testuser", "password123");
@@ -220,26 +222,27 @@ mod tests {
         assert!(manager.verify("testuser", "wrongpass").is_none());
 
         // Update Password
-        assert!(manager.update_password("testuser", "newpass").is_ok());
+        assert!(manager.update_password(&runtime, "testuser", "newpass").is_ok());
         assert!(manager.verify("testuser", "password123").is_none());
         assert!(manager.verify("testuser", "newpass").is_some());
 
         // Delete
-        assert!(manager.delete_user("testuser").is_ok());
+        assert!(manager.delete_user(&runtime, "testuser").is_ok());
         assert!(manager.verify("testuser", "newpass").is_none());
     }
 
     #[test]
     fn test_admin_protection() {
         let mut manager = UserManager::default();
-        manager.add_user("admin", "admin", Role::Admin, None).unwrap();
+        let runtime = MockRuntime::default();
+        manager.add_user(&runtime, "admin", "admin", Role::Admin, None).unwrap();
 
         // Should fail to delete last admin
-        assert!(manager.delete_user("admin").is_err());
+        assert!(manager.delete_user(&runtime, "admin").is_err());
 
         // Add another admin
-        manager.add_user("admin2", "admin", Role::Admin, None).unwrap();
+        manager.add_user(&runtime, "admin2", "admin", Role::Admin, None).unwrap();
         // Now can delete one
-        assert!(manager.delete_user("admin").is_ok());
+        assert!(manager.delete_user(&runtime, "admin").is_ok());
     }
 }

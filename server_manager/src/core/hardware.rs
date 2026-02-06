@@ -1,8 +1,4 @@
-use sysinfo::{System, SystemExt, DiskExt};
-use which::which;
-use std::path::Path;
-use log::{info, warn};
-use nix::unistd::User;
+use log::info;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum HardwareProfile {
@@ -24,31 +20,17 @@ pub struct HardwareInfo {
     pub group_id: String,
 }
 
+use crate::core::runtime::HardwareProbe;
+
 impl HardwareInfo {
-    pub fn detect() -> Self {
-        let (user_id, group_id) = Self::detect_user();
-        let mut sys = System::new();
-        sys.refresh_memory();
-        sys.refresh_cpu();
-        sys.refresh_disks_list();
-
-        let total_memory = sys.total_memory(); // Bytes
-        let ram_gb = total_memory / 1024 / 1024 / 1024;
-
-        let total_swap = sys.total_swap();
-        let swap_gb = total_swap / 1024 / 1024 / 1024;
-
-        let cpu_cores = sys.cpus().len();
-
-        let mut disk_gb = 0;
-        for disk in sys.disks() {
-            disk_gb += disk.total_space() / 1024 / 1024 / 1024;
-        }
+    pub fn detect(probe: &dyn HardwareProbe) -> Self {
+        let (user_id, group_id) = probe.detect_user_context();
+        let (ram_gb, swap_gb, cpu_cores, disk_gb) = probe.detect_hardware();
 
         let profile = Self::evaluate_profile(ram_gb, cpu_cores, swap_gb);
 
-        let has_nvidia = Self::check_nvidia();
-        let has_intel_quicksync = Path::new("/dev/dri").exists();
+        let has_nvidia = probe.has_nvidia();
+        let has_intel_quicksync = probe.has_intel_quicksync();
 
         info!("Hardware Detected: RAM={}GB, Swap={}GB, Disk={}GB, Cores={}, Profile={:?}", ram_gb, swap_gb, disk_gb, cpu_cores, profile);
         if has_nvidia { info!("Nvidia GPU Detected"); }
@@ -66,31 +48,6 @@ impl HardwareInfo {
             user_id,
             group_id,
         }
-    }
-
-    fn detect_user() -> (String, String) {
-        // Optimization: Try to use SUDO_UID and SUDO_GID directly to avoid subprocesses
-        if let (Ok(uid), Ok(gid)) = (std::env::var("SUDO_UID"), std::env::var("SUDO_GID")) {
-            return (uid, gid);
-        }
-
-        if let Ok(username) = std::env::var("SUDO_USER") {
-            if let Ok(Some(user)) = User::from_name(&username) {
-                return (user.uid.to_string(), user.gid.to_string());
-            }
-        }
-
-        warn!("SUDO_USER not found or lookup failed. Defaulting to UID/GID 1000.");
-        ("1000".to_string(), "1000".to_string())
-    }
-
-    fn check_nvidia() -> bool {
-        // Check for nvidia-smi AND (nvidia-container-cli OR nvidia-container-runtime)
-        let has_smi = which("nvidia-smi").is_ok();
-        let has_cli = which("nvidia-container-cli").is_ok();
-        let has_runtime = which("nvidia-container-runtime").is_ok();
-
-        has_smi && (has_cli || has_runtime)
     }
 
     // For testing logic without system calls
