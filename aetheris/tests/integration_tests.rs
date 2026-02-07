@@ -39,17 +39,23 @@ fn test_generate_compose_structure() {
     // 4. Verify Networks
     assert!(compose.networks.contains_key("aetheris_net"));
 
-    // 5. Verify Services Count (Should be 28)
-    assert_eq!(compose.services.len(), 28, "Expected 28 services");
+    // 5. Verify Services Count (Should be 29)
+    assert_eq!(compose.services.len(), 29, "Expected 29 services");
 
-    // 6. Verify specific service (Plex, Jellyfin, Bazarr, Syncthing)
+    // 6. Verify specific service (Plex, Jellyfin, Bazarr, Syncthing, Audiobookshelf)
     assert!(compose.services.contains_key("plex"));
     assert!(compose.services.contains_key("jellyfin"));
     assert!(compose.services.contains_key("bazarr"));
     assert!(compose.services.contains_key("syncthing"));
+    assert!(compose.services.contains_key("audiobookshelf"));
 
     let plex = compose.services.get("plex").unwrap();
     assert_eq!(plex.image, "lscr.io/linuxserver/plex:latest");
+
+    let abs = compose.services.get("audiobookshelf").unwrap();
+    assert_eq!(abs.image, "ghcr.io/advplyr/audiobookshelf:latest");
+    let abs_ports = abs.ports.as_ref().unwrap();
+    assert!(abs_ports.iter().any(|p| p.starts_with("13378:80")));
 
     let syncthing = compose.services.get("syncthing").unwrap();
     let st_ports = syncthing.ports.as_ref().unwrap();

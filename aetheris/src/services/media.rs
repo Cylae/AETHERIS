@@ -199,3 +199,29 @@ impl Service for OverseerrService {
         })
     }
 }
+
+pub struct AudiobookshelfService;
+#[async_trait]
+impl Service for AudiobookshelfService {
+    fn name(&self) -> &'static str { "audiobookshelf" }
+    fn image(&self) -> &'static str { "ghcr.io/advplyr/audiobookshelf:latest" }
+    fn ports(&self) -> Vec<String> { vec!["13378:80".to_string()] }
+    fn volumes(&self, _hw: &HardwareInfo) -> Vec<String> {
+        vec![
+            "./config/audiobookshelf/config:/config".to_string(),
+            "./config/audiobookshelf/metadata:/metadata".to_string(),
+            "./media/audiobooks:/audiobooks".to_string(),
+            "./media/podcasts:/podcasts".to_string(),
+             "/etc/localtime:/etc/localtime:ro".to_string(),
+             "/etc/timezone:/etc/timezone:ro".to_string()
+        ]
+    }
+    fn resources(&self, _hw: &HardwareInfo) -> Option<ResourceConfig> {
+        Some(ResourceConfig {
+            memory_limit: Some("1G".to_string()),
+            memory_reservation: None,
+            cpu_limit: None,
+            cpu_reservation: None,
+        })
+    }
+}

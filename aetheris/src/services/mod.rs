@@ -75,6 +75,7 @@ pub fn get_all_services() -> &'static [Box<dyn Service>] {
         Box::new(media::OverseerrService),
         Box::new(media::JellyfinService),
         Box::new(media::JellyseerrService),
+        Box::new(media::AudiobookshelfService),
         Box::new(arr::SonarrService),
         Box::new(arr::RadarrService),
         Box::new(arr::ProwlarrService),
