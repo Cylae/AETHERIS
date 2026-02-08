@@ -13,6 +13,47 @@ AETHERIS is an industrial-grade, environment-agnostic server stack orchestrator 
 - **Resource Optimized:** Automatically tunes service resources based on hardware profiles (Low, Standard, High).
 - **Security First:** Generates secure, random secrets and strictly manages system user quotas and permissions.
 
+## 📦 Supported Services
+
+### Media
+- Plex
+- Jellyfin
+- Audiobookshelf
+- Tautulli
+- Overseerr
+- Jellyseerr
+
+### Arr Stack
+- Sonarr
+- Radarr
+- Prowlarr
+- Jackett
+- Bazarr
+
+### Downloads
+- QBittorrent
+
+### Infrastructure
+- MariaDB
+- Redis
+- NginxProxy
+- DNSCrypt
+- Wireguard
+- Portainer
+- Netdata
+- UptimeKuma
+
+### Apps
+- Vaultwarden
+- Filebrowser
+- Yourls
+- GLPI
+- Gitea
+- Roundcube
+- Nextcloud
+- MailService
+- Syncthing
+
 ## 🏗 Architecture
 
 AETHERIS follows the Ports & Adapters pattern:
