@@ -93,7 +93,7 @@ AETHERIS is designed to be fully testable without requiring Docker or root privi
 cargo test
 ```
 
-The test suite automatically utilizes the `MockRuntime` to verify orchestrator logic and service configurations.
+The test suite automatically utilizes the `MockRuntime` to verify orchestrator logic and service configurations, including file generation and security settings.
 
 ---
 **Project AETHERIS** - *The Environment-Agnostic Orchestrator.*
