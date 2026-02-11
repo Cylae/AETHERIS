@@ -81,6 +81,8 @@ pub fn get_all_services() -> &'static [Box<dyn Service>] {
         Box::new(arr::ProwlarrService),
         Box::new(arr::JackettService),
         Box::new(arr::BazarrService),
+        Box::new(arr::LidarrService),
+        Box::new(arr::ReadarrService),
         Box::new(download::QBittorrentService),
         Box::new(infra::MariaDBService),
         Box::new(infra::RedisService),
