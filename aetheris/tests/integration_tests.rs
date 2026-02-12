@@ -39,8 +39,8 @@ fn test_generate_compose_structure() {
     // 4. Verify Networks
     assert!(compose.networks.contains_key("aetheris_net"));
 
-    // 5. Verify Services Count (Should be 29)
-    assert_eq!(compose.services.len(), 29, "Expected 29 services");
+    // 5. Verify Services Count (Should be 31)
+    assert_eq!(compose.services.len(), 31, "Expected 31 services");
 
     // 6. Verify specific service (Plex, Jellyfin, Bazarr, Syncthing)
     assert!(compose.services.contains_key("plex"));
@@ -48,6 +48,18 @@ fn test_generate_compose_structure() {
     assert!(compose.services.contains_key("audiobookshelf"));
     assert!(compose.services.contains_key("bazarr"));
     assert!(compose.services.contains_key("syncthing"));
+    assert!(compose.services.contains_key("lidarr"));
+    assert!(compose.services.contains_key("readarr"));
+
+    let lidarr = compose.services.get("lidarr").unwrap();
+    assert_eq!(lidarr.image, "lscr.io/linuxserver/lidarr:latest");
+    let lidarr_ports = lidarr.ports.as_ref().unwrap();
+    assert!(lidarr_ports[0].starts_with("127.0.0.1:8686"));
+
+    let readarr = compose.services.get("readarr").unwrap();
+    assert_eq!(readarr.image, "lscr.io/linuxserver/readarr:develop");
+    let readarr_ports = readarr.ports.as_ref().unwrap();
+    assert!(readarr_ports[0].starts_with("127.0.0.1:8787"));
 
     let plex = compose.services.get("plex").unwrap();
     assert_eq!(plex.image, "lscr.io/linuxserver/plex:latest");
