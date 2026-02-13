@@ -27,6 +27,8 @@ AETHERIS is an industrial-grade, environment-agnostic server stack orchestrator 
 - Sonarr
 - Radarr
 - Prowlarr
+- Lidarr
+- Readarr
 - Jackett
 - Bazarr
 
