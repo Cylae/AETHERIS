@@ -7,7 +7,7 @@ use axum::{
 };
 use std::fmt::Write;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use crate::services;
 use crate::core::config::Config;
 use crate::core::users::{UserManager, Role};
@@ -33,9 +33,19 @@ struct CachedConfig {
     last_modified: Option<SystemTime>,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct SystemStats {
+    ram_used: u64,
+    ram_total: u64,
+    swap_used: u64,
+    swap_total: u64,
+    cpu_usage: f32,
+    disk_total: u64,
+    disk_used: u64,
+}
+
 struct AppState {
-    system: Mutex<System>,
-    last_system_refresh: Mutex<SystemTime>,
+    system_stats: RwLock<SystemStats>,
     config_cache: RwLock<CachedConfig>,
 }
 
@@ -83,20 +93,62 @@ pub async fn start_server(port: u16) -> anyhow::Result<()> {
         .with_secure(false) // Localhost/LAN, http usually
         .with_expiry(Expiry::OnInactivity(Duration::hours(24)));
 
-    // Initialize System once
-    let mut sys = System::new_all();
-    sys.refresh_all();
-
     let initial_config = Config::load().unwrap_or_default();
     let initial_mtime = std::fs::metadata("config.yaml").ok().and_then(|m| m.modified().ok());
 
     let app_state = Arc::new(AppState {
-        system: Mutex::new(sys),
-        last_system_refresh: Mutex::new(SystemTime::now()),
+        system_stats: RwLock::new(SystemStats::default()),
         config_cache: RwLock::new(CachedConfig {
             config: initial_config,
             last_modified: initial_mtime,
         }),
+    });
+
+    // Background system refresh task
+    let state_for_task = app_state.clone();
+    tokio::spawn(async move {
+        let mut sys = System::new_all();
+        loop {
+            let stats_and_sys_res = tokio::task::spawn_blocking(move || {
+                sys.refresh_cpu();
+                sys.refresh_memory();
+                sys.refresh_disks();
+
+                let mut stats = SystemStats {
+                    ram_used: sys.used_memory() / 1024 / 1024,
+                    ram_total: sys.total_memory() / 1024 / 1024,
+                    swap_used: sys.used_swap() / 1024 / 1024,
+                    swap_total: sys.total_swap() / 1024 / 1024,
+                    cpu_usage: sys.global_cpu_info().cpu_usage(),
+                    disk_total: 0,
+                    disk_used: 0,
+                };
+
+                for disk in sys.disks() {
+                    if disk.mount_point() == std::path::Path::new("/") {
+                        stats.disk_total = disk.total_space() / 1024 / 1024 / 1024;
+                        stats.disk_used = (disk.total_space() - disk.available_space()) / 1024 / 1024 / 1024;
+                        break;
+                    }
+                }
+                (stats, sys)
+            }).await;
+
+            match stats_and_sys_res {
+                Ok((new_stats, returned_sys)) => {
+                    sys = returned_sys;
+                    let mut w = state_for_task.system_stats.write().await;
+                    *w = new_stats;
+                }
+                Err(e) => {
+                    error!("Background system refresh task panicked: {}", e);
+                    // Re-initialize System if it was lost due to panic
+                    sys = tokio::task::spawn_blocking(System::new_all).await.unwrap_or_else(|_| System::new_all());
+                }
+            }
+
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        }
     });
 
     let app = Router::new()
@@ -257,35 +309,15 @@ async fn dashboard(State(state): State<SharedState>, session: Session) -> impl I
     let services = services::get_all_services();
     let config = state.get_config().await;
 
-    // System Stats
-    let mut sys = state.system.lock().unwrap();
-    let now = SystemTime::now();
-    let mut last_refresh = state.last_system_refresh.lock().unwrap();
-
-    // Throttle refresh to max once every 500ms
-    if now.duration_since(*last_refresh).unwrap_or_default().as_millis() > 500 {
-        sys.refresh_cpu();
-        sys.refresh_memory();
-        sys.refresh_disks();
-        *last_refresh = now;
-    }
-    let ram_used = sys.used_memory() / 1024 / 1024; // MB
-    let ram_total = sys.total_memory() / 1024 / 1024; // MB
-    let swap_used = sys.used_swap() / 1024 / 1024; // MB
-    let swap_total = sys.total_swap() / 1024 / 1024; // MB
-    let cpu_usage = sys.global_cpu_info().cpu_usage();
-
-    // Simple Disk Usage (Root)
-    let mut disk_total = 0;
-    let mut disk_used = 0;
-    for disk in sys.disks() {
-        if disk.mount_point() == std::path::Path::new("/") {
-            disk_total = disk.total_space() / 1024 / 1024 / 1024; // GB
-            disk_used = (disk.total_space() - disk.available_space()) / 1024 / 1024 / 1024; // GB
-            break;
-        }
-    }
-    drop(sys); // Release lock explicitely
+    // System Stats (Cached)
+    let stats = *state.system_stats.read().await;
+    let ram_used = stats.ram_used;
+    let ram_total = stats.ram_total;
+    let swap_used = stats.swap_used;
+    let swap_total = stats.swap_total;
+    let cpu_usage = stats.cpu_usage;
+    let disk_total = stats.disk_total;
+    let disk_used = stats.disk_used;
 
     let mut html = html_head("Dashboard - AETHERIS");
 
