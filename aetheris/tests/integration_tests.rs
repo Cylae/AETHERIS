@@ -204,3 +204,19 @@ fn test_disabled_service_filtering() {
     assert!(!compose.services.contains_key("plex"), "Plex should be disabled");
     assert!(compose.services.contains_key("jellyfin"), "Jellyfin should still be enabled");
 }
+
+#[test]
+fn test_config_serialization() {
+    let mut config = Config::default();
+    config.secure_sessions = true;
+    config.disable_service("plex");
+
+    let yaml = serde_yaml_ng::to_string(&config).unwrap();
+    assert!(yaml.contains("secure_sessions: true"));
+    assert!(yaml.contains("disabled_services:"));
+    assert!(yaml.contains("- plex"));
+
+    let deserialized: Config = serde_yaml_ng::from_str(&yaml).unwrap();
+    assert!(deserialized.secure_sessions);
+    assert!(deserialized.disabled_services.contains("plex"));
+}
