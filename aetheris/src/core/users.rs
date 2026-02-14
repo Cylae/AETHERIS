@@ -93,6 +93,10 @@ impl UserManager {
             return Err(anyhow!("Invalid username: allowed characters are ASCII alphanumeric, underscore, and hyphen"));
         }
 
+        if password.contains('\n') || password.contains('\r') {
+            return Err(anyhow!("Invalid password: newlines are not allowed"));
+        }
+
         if runtime.check_root().is_ok() {
             runtime.create_user(username, password).await?;
             if let Some(gb) = quota_gb {
@@ -136,6 +140,10 @@ impl UserManager {
 
     pub async fn update_password(&mut self, runtime: &dyn SystemPort, username: &str, new_password: &str) -> Result<()> {
         if let Some(user) = self.users.get_mut(username) {
+            if new_password.contains('\n') || new_password.contains('\r') {
+                return Err(anyhow!("Invalid password: newlines are not allowed"));
+            }
+
             if runtime.check_root().is_ok() {
                 runtime.set_password(username, new_password).await?;
             } else {

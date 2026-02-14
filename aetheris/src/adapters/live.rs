@@ -1,9 +1,9 @@
 use anyhow::{Result, Context, bail};
 use async_trait::async_trait;
 use std::path::Path;
-use std::process::Command;
+use tokio::process::Command;
 use std::fs;
-use std::io::Write;
+use tokio::io::AsyncWriteExt;
 use which::which;
 use nix::unistd::{Uid, User};
 use sysinfo::{System, SystemExt, DiskExt};
@@ -19,9 +19,9 @@ impl RuntimePort for LiveAdapter {
     }
 
     async fn install_docker(&self) -> Result<()> {
-        let status = Command::new("curl").args(["-fsSL", "https://get.docker.com", "-o", "get-docker.sh"]).status()?;
+        let status = Command::new("curl").args(["-fsSL", "https://get.docker.com", "-o", "get-docker.sh"]).status().await?;
         if !status.success() { bail!("Failed to download docker install script"); }
-        let status = Command::new("sh").arg("get-docker.sh").status()?;
+        let status = Command::new("sh").arg("get-docker.sh").status().await?;
         if !status.success() { bail!("Failed to execute docker install script"); }
         Ok(())
     }
@@ -30,7 +30,7 @@ impl RuntimePort for LiveAdapter {
         let status = Command::new("docker")
             .args(["compose", "up", "-d", "--remove-orphans"])
             .current_dir(workdir)
-            .status()?;
+            .status().await?;
         if !status.success() { bail!("Docker compose failed"); }
         Ok(())
     }
@@ -87,8 +87,8 @@ impl SystemPort for LiveAdapter {
         if which("apt-get").is_err() {
             bail!("apt-get not found. This tool supports Debian/Ubuntu based systems only.");
         }
-        Command::new("apt-get").arg("update").status()?;
-        let status = Command::new("apt-get").arg("install").arg("-y").args(&pkgs).status()?;
+        Command::new("apt-get").arg("update").status().await?;
+        let status = Command::new("apt-get").arg("install").arg("-y").args(&pkgs).status().await?;
         if !status.success() { bail!("apt-get install failed"); }
         Ok(())
     }
@@ -97,47 +97,55 @@ impl SystemPort for LiveAdapter {
         let swappiness = if ram_gb > 16 { 1 } else { 10 };
         let config = format!("vm.swappiness={}\nfs.inotify.max_user_watches=524288\n", swappiness);
         let path = Path::new("/etc/sysctl.d/99-aetheris-optimization.conf");
-        fs::write(path, config)?;
-        Command::new("sysctl").arg("--system").status()?;
+        tokio::fs::write(path, config).await?;
+        Command::new("sysctl").arg("--system").status().await?;
         Ok(())
     }
 
     async fn configure_firewall(&self) -> Result<()> {
         if which("ufw").is_err() { return Ok(()); }
-        Command::new("ufw").args(["default", "deny", "incoming"]).status()?;
-        Command::new("ufw").args(["default", "allow", "outgoing"]).status()?;
-        Command::new("ufw").args(["allow", "ssh"]).status()?;
-        let status = Command::new("ufw").args(["--force", "enable"]).status()?;
+        Command::new("ufw").args(["default", "deny", "incoming"]).status().await?;
+        Command::new("ufw").args(["default", "allow", "outgoing"]).status().await?;
+        Command::new("ufw").args(["allow", "ssh"]).status().await?;
+        let status = Command::new("ufw").args(["--force", "enable"]).status().await?;
         if !status.success() { bail!("Failed to enable ufw"); }
         Ok(())
     }
 
     async fn create_user(&self, username: &str, password: &str) -> Result<()> {
-        let status = Command::new("useradd").args(["-m", "-s", "/bin/bash", username]).status()?;
+        let status = Command::new("useradd").args(["-m", "-s", "/bin/bash", username]).status().await?;
         if !status.success() { bail!("useradd failed"); }
         self.set_password(username, password).await
     }
 
     async fn delete_user(&self, username: &str) -> Result<()> {
-        let status = Command::new("userdel").args(["-r", username]).status()?;
+        let status = Command::new("userdel").args(["-r", username]).status().await?;
         if !status.success() { bail!("userdel failed"); }
         Ok(())
     }
 
     async fn set_password(&self, username: &str, password: &str) -> Result<()> {
+        if username.contains(':') || username.contains('\n') || username.contains('\r') {
+            bail!("Invalid username: colons and newlines are not allowed");
+        }
+        if password.contains('\n') || password.contains('\r') {
+            bail!("Invalid password: newlines are not allowed");
+        }
+
         let mut child = Command::new("chpasswd").stdin(std::process::Stdio::piped()).spawn()?;
         {
             let stdin = child.stdin.as_mut().context("Failed to open stdin")?;
-            stdin.write_all(format!("{}:{}", username, password).as_bytes())?;
+            stdin.write_all(format!("{}:{}", username, password).as_bytes()).await?;
+            stdin.flush().await?;
         }
-        let status = child.wait()?;
+        let status = child.wait().await?;
         if !status.success() { bail!("chpasswd failed"); }
         Ok(())
     }
 
     async fn set_quota(&self, username: &str, quota_gb: u64) -> Result<()> {
         let blocks = quota_gb * 1024 * 1024;
-        let status = Command::new("setquota").args(["-u", username, &blocks.to_string(), &blocks.to_string(), "0", "0", "/home"]).status()?;
+        let status = Command::new("setquota").args(["-u", username, &blocks.to_string(), &blocks.to_string(), "0", "0", "/home"]).status().await?;
         if !status.success() { bail!("setquota failed"); }
         Ok(())
     }
@@ -162,8 +170,33 @@ impl SystemPort for LiveAdapter {
     }
 
     async fn stop_and_disable_service(&self, name: &str) -> Result<()> {
-        let _ = Command::new("systemctl").args(["stop", name]).status();
-        let _ = Command::new("systemctl").args(["disable", name]).status();
+        let _ = Command::new("systemctl").args(["stop", name]).status().await;
+        let _ = Command::new("systemctl").args(["disable", name]).status().await;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_set_password_validation() {
+        let adapter = LiveAdapter;
+
+        // Malicious password
+        let result = adapter.set_password("user", "pass\nroot:hacked").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid password"));
+
+        // Malicious username (colon)
+        let result = adapter.set_password("user:root", "pass").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid username"));
+
+        // Malicious username (newline)
+        let result = adapter.set_password("user\nroot", "pass").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid username"));
     }
 }

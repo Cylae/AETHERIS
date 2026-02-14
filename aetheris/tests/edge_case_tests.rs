@@ -36,6 +36,20 @@ async fn test_special_chars_in_username() {
 }
 
 #[tokio::test]
+async fn test_malicious_password_rejection() {
+    let mut manager = UserManager::default();
+    let runtime = MockRuntime::default();
+
+    // Rejection of newlines in password during creation
+    assert!(manager.add_user(&runtime, "user1", "pass\nroot:hacked", Role::Observer, None).await.is_err());
+    assert!(manager.add_user(&runtime, "user2", "pass\rroot:hacked", Role::Observer, None).await.is_err());
+
+    // Rejection of newlines in password during update
+    manager.add_user(&runtime, "user3", "initial_pass", Role::Observer, None).await.unwrap();
+    assert!(manager.update_password(&runtime, "user3", "new\npass").await.is_err());
+}
+
+#[tokio::test]
 async fn test_extremely_long_password() {
     let mut manager = UserManager::default();
     let runtime = MockRuntime::default();
