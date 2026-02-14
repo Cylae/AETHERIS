@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Serialize)]
 pub struct ComposeFile {
@@ -16,7 +16,7 @@ pub struct Service {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ports: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub environment: Option<Vec<String>>,
+    pub environment: Option<BTreeMap<String, String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub volumes: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -30,7 +30,7 @@ pub struct Service {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security_opt: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub labels: Option<Vec<String>>,
+    pub labels: Option<BTreeMap<String, String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cap_add: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]

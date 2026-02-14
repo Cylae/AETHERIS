@@ -1,12 +1,12 @@
-use aetheris_core::ports::SystemPort;
-use aetheris_core::services::{Service, apps::NextcloudService};
 use aetheris_core::core::hardware::{HardwareInfo, HardwareProfile};
 use aetheris_core::core::secrets::Secrets;
+use aetheris_core::ports::SystemPort;
+use aetheris_core::services::{apps::NextcloudService, Service};
 use anyhow::Result;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 
 #[derive(Default)]
 struct SpySystem {
@@ -17,18 +17,39 @@ struct SpySystem {
 
 #[async_trait]
 impl SystemPort for SpySystem {
-    fn check_root(&self) -> Result<()> { Ok(()) }
-    async fn install_packages(&self, _pkgs: Vec<String>) -> Result<()> { Ok(()) }
-    async fn apply_optimizations(&self, _ram_gb: u64) -> Result<()> { Ok(()) }
-    async fn configure_firewall(&self) -> Result<()> { Ok(()) }
-    async fn create_user(&self, _u: &str, _p: &str) -> Result<()> { Ok(()) }
-    async fn delete_user(&self, _u: &str) -> Result<()> { Ok(()) }
-    async fn set_password(&self, _u: &str, _p: &str) -> Result<()> { Ok(()) }
-    async fn set_quota(&self, _u: &str, _q: u64) -> Result<()> { Ok(()) }
-    fn get_uid(&self, _u: &str) -> Result<u32> { Ok(1000) }
+    fn check_root(&self) -> Result<()> {
+        Ok(())
+    }
+    async fn install_packages(&self, _pkgs: Vec<String>) -> Result<()> {
+        Ok(())
+    }
+    async fn apply_optimizations(&self, _ram_gb: u64) -> Result<()> {
+        Ok(())
+    }
+    async fn configure_firewall(&self) -> Result<()> {
+        Ok(())
+    }
+    async fn create_user(&self, _u: &str, _p: &str) -> Result<()> {
+        Ok(())
+    }
+    async fn delete_user(&self, _u: &str) -> Result<()> {
+        Ok(())
+    }
+    async fn set_password(&self, _u: &str, _p: &str) -> Result<()> {
+        Ok(())
+    }
+    async fn set_quota(&self, _u: &str, _q: u64) -> Result<()> {
+        Ok(())
+    }
+    fn get_uid(&self, _u: &str) -> Result<u32> {
+        Ok(1000)
+    }
 
     fn write_file(&self, path: &Path, content: &str) -> Result<()> {
-        self.written_files.lock().unwrap().insert(path.to_path_buf(), content.to_string());
+        self.written_files
+            .lock()
+            .unwrap()
+            .insert(path.to_path_buf(), content.to_string());
         Ok(())
     }
 
@@ -38,10 +59,15 @@ impl SystemPort for SpySystem {
     }
 
     fn file_exists(&self, path: &Path) -> bool {
-        self.existing_files.lock().unwrap().contains(&path.to_path_buf())
+        self.existing_files
+            .lock()
+            .unwrap()
+            .contains(&path.to_path_buf())
     }
 
-    async fn stop_and_disable_service(&self, _name: &str) -> Result<()> { Ok(()) }
+    async fn stop_and_disable_service(&self, _name: &str) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[tokio::test]
@@ -65,7 +91,10 @@ async fn test_nextcloud_configure_writes_autoconfig() {
         ..Secrets::default()
     };
 
-    service.configure(&system, &hw, &secrets).await.expect("Configure failed");
+    service
+        .configure(&system, &hw, &secrets)
+        .await
+        .expect("Configure failed");
 
     let created = system.created_dirs.lock().unwrap();
     assert!(created.contains(&PathBuf::from("./config/nextcloud")));
@@ -73,7 +102,10 @@ async fn test_nextcloud_configure_writes_autoconfig() {
     let written = system.written_files.lock().unwrap();
     let autoconfig_path = Path::new("./config/nextcloud/autoconfig.php");
 
-    assert!(written.contains_key(autoconfig_path), "autoconfig.php should be written");
+    assert!(
+        written.contains_key(autoconfig_path),
+        "autoconfig.php should be written"
+    );
 
     let content = written.get(autoconfig_path).unwrap();
     assert!(content.contains("secret_db_pass"));
@@ -85,7 +117,11 @@ async fn test_nextcloud_configure_skips_if_config_exists() {
     let system = SpySystem::default();
 
     // Simulate config.php existing
-    system.existing_files.lock().unwrap().push(PathBuf::from("./config/nextcloud/config.php"));
+    system
+        .existing_files
+        .lock()
+        .unwrap()
+        .push(PathBuf::from("./config/nextcloud/config.php"));
 
     let service = NextcloudService;
     let hw = HardwareInfo {
@@ -101,10 +137,16 @@ async fn test_nextcloud_configure_skips_if_config_exists() {
     };
     let secrets = Secrets::default();
 
-    service.configure(&system, &hw, &secrets).await.expect("Configure failed");
+    service
+        .configure(&system, &hw, &secrets)
+        .await
+        .expect("Configure failed");
 
     let written = system.written_files.lock().unwrap();
     let autoconfig_path = Path::new("./config/nextcloud/autoconfig.php");
 
-    assert!(!written.contains_key(autoconfig_path), "autoconfig.php should NOT be written if config.php exists");
+    assert!(
+        !written.contains_key(autoconfig_path),
+        "autoconfig.php should NOT be written if config.php exists"
+    );
 }

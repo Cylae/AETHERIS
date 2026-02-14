@@ -1,10 +1,10 @@
-use anyhow::{Result, Context};
-use std::path::Path;
-use log::info;
-use crate::ports::{RuntimePort, SystemPort};
-use crate::core::{hardware, secrets, config};
-use crate::services;
 use crate::build_compose_structure;
+use crate::core::{config, hardware, secrets};
+use crate::ports::{RuntimePort, SystemPort};
+use crate::services;
+use anyhow::{Context, Result};
+use log::info;
+use std::path::Path;
 
 pub struct AetherisOrchestrator {
     runtime: Box<dyn RuntimePort>,
@@ -24,7 +24,9 @@ impl AetherisOrchestrator {
         let install_dir = Path::new("/opt/aetheris");
         if !self.system.file_exists(install_dir) {
             info!("Creating installation directory at /opt/aetheris...");
-            self.system.create_dir_all(install_dir).context("Failed to create /opt/aetheris")?;
+            self.system
+                .create_dir_all(install_dir)
+                .context("Failed to create /opt/aetheris")?;
         }
         std::env::set_current_dir(install_dir).context("Failed to chdir to /opt/aetheris")?;
 
@@ -33,10 +35,17 @@ impl AetherisOrchestrator {
         let hw = hardware::HardwareInfo::from_specs(specs.clone(), uid, gid);
 
         let pkgs = vec![
-            "curl".to_string(), "git".to_string(), "ufw".to_string(),
-            "lsb-release".to_string(), "ca-certificates".to_string(), "gnupg".to_string(),
-            "htop".to_string(), "iotop".to_string(), "net-tools".to_string(),
-            "quota".to_string(), "build-essential".to_string()
+            "curl".to_string(),
+            "git".to_string(),
+            "ufw".to_string(),
+            "lsb-release".to_string(),
+            "ca-certificates".to_string(),
+            "gnupg".to_string(),
+            "htop".to_string(),
+            "iotop".to_string(),
+            "net-tools".to_string(),
+            "quota".to_string(),
+            "build-essential".to_string(),
         ];
 
         info!("Installing system dependencies...");
@@ -88,14 +97,19 @@ impl AetherisOrchestrator {
 
         println!("\n=== Runtime Status ===");
         if self.runtime.is_docker_installed() {
-             println!("Docker: Installed");
+            println!("Docker: Installed");
         } else {
-             println!("Docker: NOT Installed");
+            println!("Docker: NOT Installed");
         }
         Ok(())
     }
 
-    async fn configure_services(&self, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
+    async fn configure_services(
+        &self,
+        hw: &hardware::HardwareInfo,
+        secrets: &secrets::Secrets,
+        config: &config::Config,
+    ) -> Result<()> {
         let all_services = services::get_all_services();
         for service in all_services {
             if config.is_enabled(service.name()) {
@@ -105,20 +119,33 @@ impl AetherisOrchestrator {
         Ok(())
     }
 
-    async fn initialize_services(&self, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
+    async fn initialize_services(
+        &self,
+        hw: &hardware::HardwareInfo,
+        secrets: &secrets::Secrets,
+        config: &config::Config,
+    ) -> Result<()> {
         let all_services = services::get_all_services();
         for service in all_services {
             if config.is_enabled(service.name()) {
-                service.initialize(self.system.as_ref(), hw, secrets).await?;
+                service
+                    .initialize(self.system.as_ref(), hw, secrets)
+                    .await?;
             }
         }
         Ok(())
     }
 
-    async fn generate_compose(&self, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
+    async fn generate_compose(
+        &self,
+        hw: &hardware::HardwareInfo,
+        secrets: &secrets::Secrets,
+        config: &config::Config,
+    ) -> Result<()> {
         let top_level = build_compose_structure(hw, secrets, config)?;
         let yaml_output = serde_yaml_ng::to_string(&top_level)?;
-        self.system.write_file(Path::new("docker-compose.yml"), &yaml_output)?;
+        self.system
+            .write_file(Path::new("docker-compose.yml"), &yaml_output)?;
         Ok(())
     }
 }

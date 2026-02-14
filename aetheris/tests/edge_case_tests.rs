@@ -1,9 +1,9 @@
-use aetheris_core::core::hardware::{HardwareInfo, HardwareProfile};
-use aetheris_core::core::secrets::Secrets;
-use aetheris_core::core::config::Config;
-use aetheris_core::core::users::{UserManager, Role};
 use aetheris_core::adapters::mock::MockRuntime;
 use aetheris_core::build_compose_structure;
+use aetheris_core::core::config::Config;
+use aetheris_core::core::hardware::{HardwareInfo, HardwareProfile};
+use aetheris_core::core::secrets::Secrets;
+use aetheris_core::core::users::{Role, UserManager};
 
 // ============================================================================
 // UNICODE AND SPECIAL CHARACTER TESTS
@@ -15,9 +15,18 @@ async fn test_unicode_username_rejection() {
     let runtime = MockRuntime::default();
 
     // Should reject unicode characters
-    assert!(manager.add_user(&runtime, "user™", "password", Role::Observer, None).await.is_err());
-    assert!(manager.add_user(&runtime, "用户", "password", Role::Observer, None).await.is_err());
-    assert!(manager.add_user(&runtime, "user🎉", "password", Role::Observer, None).await.is_err());
+    assert!(manager
+        .add_user(&runtime, "user™", "password", Role::Observer, None)
+        .await
+        .is_err());
+    assert!(manager
+        .add_user(&runtime, "用户", "password", Role::Observer, None)
+        .await
+        .is_err());
+    assert!(manager
+        .add_user(&runtime, "user🎉", "password", Role::Observer, None)
+        .await
+        .is_err());
 }
 
 #[tokio::test]
@@ -26,13 +35,28 @@ async fn test_special_chars_in_username() {
     let runtime = MockRuntime::default();
 
     // Should accept valid special chars
-    assert!(manager.add_user(&runtime, "user_name", "password", Role::Observer, None).await.is_ok());
-    assert!(manager.add_user(&runtime, "user-name", "password", Role::Observer, None).await.is_ok());
+    assert!(manager
+        .add_user(&runtime, "user_name", "password", Role::Observer, None)
+        .await
+        .is_ok());
+    assert!(manager
+        .add_user(&runtime, "user-name", "password", Role::Observer, None)
+        .await
+        .is_ok());
 
     // Should reject invalid special chars
-    assert!(manager.add_user(&runtime, "user name", "password", Role::Observer, None).await.is_err());
-    assert!(manager.add_user(&runtime, "user@name", "password", Role::Observer, None).await.is_err());
-    assert!(manager.add_user(&runtime, "user/name", "password", Role::Observer, None).await.is_err());
+    assert!(manager
+        .add_user(&runtime, "user name", "password", Role::Observer, None)
+        .await
+        .is_err());
+    assert!(manager
+        .add_user(&runtime, "user@name", "password", Role::Observer, None)
+        .await
+        .is_err());
+    assert!(manager
+        .add_user(&runtime, "user/name", "password", Role::Observer, None)
+        .await
+        .is_err());
 }
 
 #[tokio::test]
@@ -42,14 +66,25 @@ async fn test_extremely_long_password() {
 
     // Test 1KB password
     let long_password = "a".repeat(1024);
-    assert!(manager.add_user(&runtime, "testuser", &long_password, Role::Observer, None).await.is_ok());
+    assert!(manager
+        .add_user(&runtime, "testuser", &long_password, Role::Observer, None)
+        .await
+        .is_ok());
 
     // Verify it works
     assert!(manager.verify("testuser", &long_password).is_some());
 
     // Test 10KB password
     let very_long_password = "b".repeat(10240);
-    let result = manager.add_user(&runtime, "testuser2", &very_long_password, Role::Observer, None).await;
+    let result = manager
+        .add_user(
+            &runtime,
+            "testuser2",
+            &very_long_password,
+            Role::Observer,
+            None,
+        )
+        .await;
     if result.is_ok() {
         assert!(manager.verify("testuser2", &very_long_password).is_some());
     }
@@ -61,10 +96,22 @@ async fn test_extremely_long_password() {
 
 #[test]
 fn test_hardware_profile_boundary_conditions() {
-    assert_eq!(HardwareInfo::evaluate_profile(4, 3, 2), HardwareProfile::Standard);
-    assert_eq!(HardwareInfo::evaluate_profile(3, 3, 2), HardwareProfile::Low);
-    assert_eq!(HardwareInfo::evaluate_profile(16, 8, 0), HardwareProfile::Standard);
-    assert_eq!(HardwareInfo::evaluate_profile(17, 8, 0), HardwareProfile::High);
+    assert_eq!(
+        HardwareInfo::evaluate_profile(4, 3, 2),
+        HardwareProfile::Standard
+    );
+    assert_eq!(
+        HardwareInfo::evaluate_profile(3, 3, 2),
+        HardwareProfile::Low
+    );
+    assert_eq!(
+        HardwareInfo::evaluate_profile(16, 8, 0),
+        HardwareProfile::Standard
+    );
+    assert_eq!(
+        HardwareInfo::evaluate_profile(17, 8, 0),
+        HardwareProfile::High
+    );
 }
 
 // ============================================================================
@@ -106,13 +153,19 @@ fn test_compose_generation_with_all_services_disabled() {
 async fn test_user_deletion_protections() {
     let mut manager = UserManager::default();
     let runtime = MockRuntime::default();
-    manager.add_user(&runtime, "admin", "password", Role::Admin, None).await.unwrap();
+    manager
+        .add_user(&runtime, "admin", "password", Role::Admin, None)
+        .await
+        .unwrap();
 
     // Cannot delete last admin
     assert!(manager.delete_user(&runtime, "admin").await.is_err());
 
     // Add another admin
-    manager.add_user(&runtime, "admin2", "password", Role::Admin, None).await.unwrap();
+    manager
+        .add_user(&runtime, "admin2", "password", Role::Admin, None)
+        .await
+        .unwrap();
 
     // Now can delete first admin
     assert!(manager.delete_user(&runtime, "admin").await.is_ok());
@@ -125,11 +178,17 @@ async fn test_user_deletion_protections() {
 async fn test_user_password_update() {
     let mut manager = UserManager::default();
     let runtime = MockRuntime::default();
-    manager.add_user(&runtime, "testuser", "initial_pass", Role::Observer, None).await.unwrap();
+    manager
+        .add_user(&runtime, "testuser", "initial_pass", Role::Observer, None)
+        .await
+        .unwrap();
 
     assert!(manager.verify("testuser", "initial_pass").is_some());
 
-    manager.update_password(&runtime, "testuser", "new_pass").await.unwrap();
+    manager
+        .update_password(&runtime, "testuser", "new_pass")
+        .await
+        .unwrap();
 
     assert!(manager.verify("testuser", "initial_pass").is_none());
     assert!(manager.verify("testuser", "new_pass").is_some());
@@ -139,8 +198,14 @@ async fn test_user_password_update() {
 async fn test_user_listing() {
     let mut manager = UserManager::default();
     let runtime = MockRuntime::default();
-    manager.add_user(&runtime, "user1", "pass", Role::Observer, None).await.unwrap();
-    manager.add_user(&runtime, "user2", "pass", Role::Admin, Some(10)).await.unwrap();
+    manager
+        .add_user(&runtime, "user1", "pass", Role::Observer, None)
+        .await
+        .unwrap();
+    manager
+        .add_user(&runtime, "user2", "pass", Role::Admin, Some(10))
+        .await
+        .unwrap();
 
     let users = manager.list_users();
     assert_eq!(users.len(), 2);

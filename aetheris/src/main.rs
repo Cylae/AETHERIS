@@ -1,6 +1,6 @@
+use aetheris_core::interface::cli;
 use anyhow::Result;
 use log::LevelFilter;
-use aetheris_core::interface::cli;
 
 #[tokio::main]
 async fn main() -> Result<()> {

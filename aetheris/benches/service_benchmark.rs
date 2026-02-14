@@ -1,5 +1,5 @@
-use criterion::{criterion_group, criterion_main, Criterion};
 use aetheris_core::services::get_all_services;
+use criterion::{criterion_group, criterion_main, Criterion};
 
 fn benchmark_get_all_services(c: &mut Criterion) {
     c.bench_function("get_all_services", |b| {

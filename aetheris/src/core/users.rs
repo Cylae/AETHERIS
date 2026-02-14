@@ -1,11 +1,11 @@
+use crate::ports::SystemPort;
+use anyhow::{anyhow, Context, Result};
+use bcrypt::{hash, verify, DEFAULT_COST};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use anyhow::{Result, Context, anyhow};
-use log::{info, warn};
-use bcrypt::{DEFAULT_COST, hash, verify};
-use crate::ports::SystemPort;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Role {
@@ -59,12 +59,15 @@ impl UserManager {
             info!("No users found. Creating default 'admin' user.");
             let pass = "admin";
             let hash = hash(pass, DEFAULT_COST)?;
-            manager.users.insert("admin".to_string(), User {
-                username: "admin".to_string(),
-                password_hash: hash,
-                role: Role::Admin,
-                quota_gb: None,
-            });
+            manager.users.insert(
+                "admin".to_string(),
+                User {
+                    username: "admin".to_string(),
+                    password_hash: hash,
+                    role: Role::Admin,
+                    quota_gb: None,
+                },
+            );
             manager.save()?;
             info!("Default user 'admin' created with password 'admin'. CHANGE THIS IMMEDIATELY!");
         }
@@ -74,9 +77,9 @@ impl UserManager {
 
     pub fn save(&self) -> Result<()> {
         let target = if Path::new("/opt/aetheris").exists() {
-             Path::new("/opt/aetheris/users.yaml")
+            Path::new("/opt/aetheris/users.yaml")
         } else {
-             Path::new("users.yaml")
+            Path::new("users.yaml")
         };
 
         let content = serde_yaml_ng::to_string(self)?;
@@ -84,12 +87,22 @@ impl UserManager {
         Ok(())
     }
 
-    pub async fn add_user(&mut self, runtime: &dyn SystemPort, username: &str, password: &str, role: Role, quota_gb: Option<u64>) -> Result<()> {
+    pub async fn add_user(
+        &mut self,
+        runtime: &dyn SystemPort,
+        username: &str,
+        password: &str,
+        role: Role,
+        quota_gb: Option<u64>,
+    ) -> Result<()> {
         if self.users.contains_key(username) {
             return Err(anyhow!("User already exists"));
         }
 
-        if !username.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
+        if !username
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+        {
             return Err(anyhow!("Invalid username: allowed characters are ASCII alphanumeric, underscore, and hyphen"));
         }
 
@@ -99,23 +112,33 @@ impl UserManager {
                 runtime.set_quota(username, gb).await?;
             }
         } else {
-            warn!("Not running as root. Skipping system user creation for '{}'.", username);
+            warn!(
+                "Not running as root. Skipping system user creation for '{}'.",
+                username
+            );
         }
 
         let hash = hash(password, DEFAULT_COST)?;
-        self.users.insert(username.to_string(), User {
-            username: username.to_string(),
-            password_hash: hash,
-            role,
-            quota_gb,
-        });
+        self.users.insert(
+            username.to_string(),
+            User {
+                username: username.to_string(),
+                password_hash: hash,
+                role,
+                quota_gb,
+            },
+        );
         self.save()
     }
 
     pub async fn delete_user(&mut self, runtime: &dyn SystemPort, username: &str) -> Result<()> {
         if let Some(user) = self.users.get(username) {
             if user.role == Role::Admin {
-                let admin_count = self.users.values().filter(|u| u.role == Role::Admin).count();
+                let admin_count = self
+                    .users
+                    .values()
+                    .filter(|u| u.role == Role::Admin)
+                    .count();
                 if admin_count <= 1 {
                     return Err(anyhow!("Cannot delete the last admin user"));
                 }
@@ -127,19 +150,30 @@ impl UserManager {
         if runtime.check_root().is_ok() {
             runtime.delete_user(username).await?;
         } else {
-            warn!("Not running as root. Skipping system user deletion for '{}'.", username);
+            warn!(
+                "Not running as root. Skipping system user deletion for '{}'.",
+                username
+            );
         }
 
         self.users.remove(username);
         self.save()
     }
 
-    pub async fn update_password(&mut self, runtime: &dyn SystemPort, username: &str, new_password: &str) -> Result<()> {
+    pub async fn update_password(
+        &mut self,
+        runtime: &dyn SystemPort,
+        username: &str,
+        new_password: &str,
+    ) -> Result<()> {
         if let Some(user) = self.users.get_mut(username) {
             if runtime.check_root().is_ok() {
                 runtime.set_password(username, new_password).await?;
             } else {
-                warn!("Not running as root. Skipping system password update for '{}'.", username);
+                warn!(
+                    "Not running as root. Skipping system password update for '{}'.",
+                    username
+                );
             }
 
             user.password_hash = hash(new_password, DEFAULT_COST)?;
@@ -164,9 +198,10 @@ impl UserManager {
             let password = password.to_string();
             let user_clone = user.clone();
 
-            let is_valid = tokio::task::spawn_blocking(move || {
-                verify(&password, &hash).unwrap_or(false)
-            }).await.unwrap_or(false);
+            let is_valid =
+                tokio::task::spawn_blocking(move || verify(&password, &hash).unwrap_or(false))
+                    .await
+                    .unwrap_or(false);
 
             if is_valid {
                 return Some(user_clone);

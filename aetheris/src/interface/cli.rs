@@ -1,11 +1,11 @@
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use log::info;
-use anyhow::{Result, Context};
-use std::io::{self, Write};
 use rpassword::read_password;
+use std::io::{self, Write};
 
-use crate::core::users::{self, Role};
 use crate::adapters::live::LiveAdapter;
+use crate::core::users::{self, Role};
 use crate::domain::orchestrator::AetherisOrchestrator;
 
 #[derive(Parser)]
@@ -57,8 +57,8 @@ fn read_password_securely(prompt: &str) -> Result<String> {
     print!("{}", prompt);
     io::stdout().flush()?;
 
-    let password = read_password()
-        .context("Failed to read password from terminal. Ensure stdin is a TTY.")?;
+    let password =
+        read_password().context("Failed to read password from terminal. Ensure stdin is a TTY.")?;
 
     if password.trim().is_empty() {
         return Err(anyhow::anyhow!("Password cannot be empty"));
@@ -89,7 +89,11 @@ async fn run_user_management(action: UserCommands) -> Result<()> {
     let adapter = LiveAdapter;
 
     match action {
-        UserCommands::Add { username, role, quota } => {
+        UserCommands::Add {
+            username,
+            role,
+            quota,
+        } => {
             let role_enum = match role.to_lowercase().as_str() {
                 "admin" => Role::Admin,
                 "observer" => Role::Observer,
@@ -97,7 +101,9 @@ async fn run_user_management(action: UserCommands) -> Result<()> {
             };
 
             let password = read_password_securely(&format!("Enter password for {}: ", username))?;
-            user_manager.add_user(&adapter, &username, &password, role_enum, quota).await?;
+            user_manager
+                .add_user(&adapter, &username, &password, role_enum, quota)
+                .await?;
             info!("User '{}' added successfully.", username);
         }
         UserCommands::Delete { username } => {
@@ -108,17 +114,26 @@ async fn run_user_management(action: UserCommands) -> Result<()> {
             println!("{:<20} | {:<15} | {:<10}", "Username", "Role", "Quota (GB)");
             println!("{:<20} | {:<15} | {:<10}", "--------", "----", "----------");
             for user in user_manager.list_users() {
-                let quota_display = user.quota_gb.map(|q| q.to_string()).unwrap_or_else(|| "Unlimited".to_string());
-                println!("{:<20} | {:<15?} | {:<10}", user.username, user.role, quota_display);
+                let quota_display = user
+                    .quota_gb
+                    .map(|q| q.to_string())
+                    .unwrap_or_else(|| "Unlimited".to_string());
+                println!(
+                    "{:<20} | {:<15?} | {:<10}",
+                    user.username, user.role, quota_display
+                );
             }
         }
         UserCommands::Passwd { username } => {
             if user_manager.get_user(&username).is_none() {
-                 return Err(anyhow::anyhow!("User not found"));
+                return Err(anyhow::anyhow!("User not found"));
             }
 
-            let password = read_password_securely(&format!("Enter new password for {}: ", username))?;
-            user_manager.update_password(&adapter, &username, &password).await?;
+            let password =
+                read_password_securely(&format!("Enter new password for {}: ", username))?;
+            user_manager
+                .update_password(&adapter, &username, &password)
+                .await?;
             info!("Password for '{}' updated successfully.", username);
         }
     }
