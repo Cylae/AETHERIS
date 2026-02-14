@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use anyhow::{Result, Context, anyhow};
 use log::{info, warn};
 use bcrypt::{DEFAULT_COST, hash, verify};
@@ -72,15 +72,27 @@ impl UserManager {
         Ok(manager)
     }
 
-    pub fn save(&self) -> Result<()> {
-        let target = if Path::new("/opt/aetheris").exists() {
-             Path::new("/opt/aetheris/users.yaml")
+    fn get_save_path() -> PathBuf {
+        if Path::new("/opt/aetheris").exists() {
+            PathBuf::from("/opt/aetheris/users.yaml")
         } else {
-             Path::new("users.yaml")
-        };
+            PathBuf::from("users.yaml")
+        }
+    }
 
+    pub fn save(&self) -> Result<()> {
+        let target = Self::get_save_path();
         let content = serde_yaml_ng::to_string(self)?;
         fs::write(target, content).context("Failed to write users.yaml")?;
+        Ok(())
+    }
+
+    pub async fn save_async(&self) -> Result<()> {
+        let target = Self::get_save_path();
+        let content = serde_yaml_ng::to_string(self)?;
+        tokio::fs::write(target, content)
+            .await
+            .context("Failed to write users.yaml")?;
         Ok(())
     }
 
@@ -102,14 +114,17 @@ impl UserManager {
             warn!("Not running as root. Skipping system user creation for '{}'.", username);
         }
 
-        let hash = hash(password, DEFAULT_COST)?;
+        let password_clone = password.to_string();
+        let hash = tokio::task::spawn_blocking(move || hash(password_clone, DEFAULT_COST))
+            .await??;
+
         self.users.insert(username.to_string(), User {
             username: username.to_string(),
             password_hash: hash,
             role,
             quota_gb,
         });
-        self.save()
+        self.save_async().await
     }
 
     pub async fn delete_user(&mut self, runtime: &dyn SystemPort, username: &str) -> Result<()> {
@@ -131,22 +146,29 @@ impl UserManager {
         }
 
         self.users.remove(username);
-        self.save()
+        self.save_async().await
     }
 
     pub async fn update_password(&mut self, runtime: &dyn SystemPort, username: &str, new_password: &str) -> Result<()> {
-        if let Some(user) = self.users.get_mut(username) {
-            if runtime.check_root().is_ok() {
-                runtime.set_password(username, new_password).await?;
-            } else {
-                warn!("Not running as root. Skipping system password update for '{}'.", username);
-            }
-
-            user.password_hash = hash(new_password, DEFAULT_COST)?;
-            self.save()
-        } else {
-            Err(anyhow!("User not found"))
+        if !self.users.contains_key(username) {
+            return Err(anyhow!("User not found"));
         }
+
+        let new_password_clone = new_password.to_string();
+        let hash_val = tokio::task::spawn_blocking(move || hash(new_password_clone, DEFAULT_COST))
+            .await??;
+
+        // Re-acquire the user after the async hash operation
+        let user = self.users.get_mut(username).ok_or_else(|| anyhow!("User not found"))?;
+
+        if runtime.check_root().is_ok() {
+            runtime.set_password(username, new_password).await?;
+        } else {
+            warn!("Not running as root. Skipping system password update for '{}'.", username);
+        }
+
+        user.password_hash = hash_val;
+        self.save_async().await
     }
 
     pub fn verify(&self, username: &str, password: &str) -> Option<User> {
