@@ -130,10 +130,11 @@ impl Service for NginxProxyService {
 
     async fn initialize(&self, runtime: &dyn crate::ports::SystemPort, _hw: &HardwareInfo, _secrets: &Secrets) -> Result<()> {
         let services = vec!["apache2", "nginx", "httpd"];
-        for svc in services {
-            // Stop and disable conflicting web servers
+        let futures = services.into_iter().map(|svc| async move {
             let _ = runtime.stop_and_disable_service(svc).await;
-        }
+            Ok::<(), anyhow::Error>(())
+        });
+        futures::future::try_join_all(futures).await?;
         Ok(())
     }
 

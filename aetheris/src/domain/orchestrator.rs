@@ -95,23 +95,23 @@ impl AetherisOrchestrator {
         Ok(())
     }
 
-    async fn configure_services(&self, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
+    pub async fn configure_services(&self, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
         let all_services = services::get_all_services();
-        for service in all_services {
-            if config.is_enabled(service.name()) {
-                service.configure(self.system.as_ref(), hw, secrets).await?;
-            }
-        }
+        let futures = all_services.iter()
+            .filter(|service| config.is_enabled(service.name()))
+            .map(|service| service.configure(self.system.as_ref(), hw, secrets));
+
+        futures::future::try_join_all(futures).await?;
         Ok(())
     }
 
-    async fn initialize_services(&self, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
+    pub async fn initialize_services(&self, hw: &hardware::HardwareInfo, secrets: &secrets::Secrets, config: &config::Config) -> Result<()> {
         let all_services = services::get_all_services();
-        for service in all_services {
-            if config.is_enabled(service.name()) {
-                service.initialize(self.system.as_ref(), hw, secrets).await?;
-            }
-        }
+        let futures = all_services.iter()
+            .filter(|service| config.is_enabled(service.name()))
+            .map(|service| service.initialize(self.system.as_ref(), hw, secrets));
+
+        futures::future::try_join_all(futures).await?;
         Ok(())
     }
 
