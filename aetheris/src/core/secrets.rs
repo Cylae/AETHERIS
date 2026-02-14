@@ -116,4 +116,24 @@ mod tests {
         let secrets = Secrets::default();
         assert!(secrets.mysql_root_password.is_none());
     }
+
+    #[test]
+    fn test_load_or_create_generates_new_secrets() {
+        let temp_dir = std::env::temp_dir().join(format!("aetheris_test_{}", generate_hex(4).unwrap()));
+        fs::create_dir_all(&temp_dir).unwrap();
+        let full_path = temp_dir.join("test_secrets.yaml");
+
+        // Pass the full path directly instead of using AETHERIS_HOME to avoid env flakiness
+        let secrets = Secrets::load_or_create(&full_path).unwrap();
+
+        // Verify secrets are generated
+        assert!(secrets.mysql_root_password.is_some());
+        assert_eq!(secrets.mysql_root_password.unwrap().len(), 32);
+
+        // Verify file is created
+        assert!(full_path.exists());
+
+        // Cleanup
+        fs::remove_dir_all(&temp_dir).unwrap();
+    }
 }
