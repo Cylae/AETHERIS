@@ -131,20 +131,20 @@ impl Service for NextcloudService {
             return Ok(());
         }
 
-        let escape_php = |s: &str| s.replace('\\', "\\\\").replace('"', "\\\"");
+        let escape_php = |s: &str| s.replace('\\', "\\\\").replace('\'', "\\'");
         let db_pass = escape_php(&secrets.nextcloud_db_password.clone().unwrap_or_default());
         let admin_pass = escape_php(&secrets.nextcloud_admin_password.clone().unwrap_or_default());
 
         let php_config = format!(r#"<?php
 $AUTOCONFIG = array(
-  "dbtype"        => "mysql",
-  "dbname"        => "nextcloud",
-  "dbuser"        => "nextcloud",
-  "dbpass"        => "{}",
-  "dbhost"        => "mariadb",
-  "directory"     => "/data",
-  "adminlogin"    => "admin",
-  "adminpass"     => "{}",
+  'dbtype'        => 'mysql',
+  'dbname'        => 'nextcloud',
+  'dbuser'        => 'nextcloud',
+  'dbpass'        => '{}',
+  'dbhost'        => 'mariadb',
+  'directory'     => '/data',
+  'adminlogin'    => 'admin',
+  'adminpass'     => '{}',
 );
 "#, db_pass, admin_pass);
 
