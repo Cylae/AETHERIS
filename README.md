@@ -29,6 +29,8 @@ AETHERIS is an industrial-grade, environment-agnostic server stack orchestrator 
 - Prowlarr
 - Jackett
 - Bazarr
+- Lidarr
+- Readarr
 
 ### Downloads
 - QBittorrent
