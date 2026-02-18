@@ -283,3 +283,36 @@ impl Service for UptimeKumaService {
         })
     }
 }
+
+pub struct HomepageService;
+#[async_trait]
+impl Service for HomepageService {
+    fn name(&self) -> &'static str { "homepage" }
+    fn image(&self) -> &'static str { "ghcr.io/gethomepage/homepage:latest" }
+    fn ports(&self) -> Vec<String> { vec!["3000:3000".to_string()] }
+    fn volumes(&self, _hw: &HardwareInfo) -> Vec<String> {
+        vec![
+            "./config/homepage:/app/config".to_string(),
+            "/var/run/docker.sock:/var/run/docker.sock:ro".to_string()
+        ]
+    }
+    fn env_vars(&self, hw: &HardwareInfo, _secrets: &Secrets) -> HashMap<String, String> {
+        let mut vars = HashMap::new();
+        vars.insert("PUID".to_string(), hw.user_id.clone());
+        vars.insert("PGID".to_string(), hw.group_id.clone());
+        vars
+    }
+    fn resources(&self, hw: &HardwareInfo) -> Option<ResourceConfig> {
+        let memory_limit = match hw.profile {
+            HardwareProfile::High => "512M",
+            HardwareProfile::Standard => "256M",
+            HardwareProfile::Low => "128M",
+        };
+        Some(ResourceConfig {
+            memory_limit: Some(memory_limit.to_string()),
+            memory_reservation: None,
+            cpu_limit: None,
+            cpu_reservation: None,
+        })
+    }
+}
