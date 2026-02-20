@@ -81,9 +81,12 @@ pub fn get_all_services() -> &'static [Box<dyn Service>] {
         Box::new(arr::ProwlarrService),
         Box::new(arr::JackettService),
         Box::new(arr::BazarrService),
+        Box::new(arr::LidarrService),
+        Box::new(arr::ReadarrService),
         Box::new(download::QBittorrentService),
         Box::new(infra::MariaDBService),
         Box::new(infra::RedisService),
+        Box::new(infra::HomepageService),
         Box::new(infra::NginxProxyService),
         Box::new(infra::DNSCryptService),
         Box::new(infra::WireguardService),
@@ -115,6 +118,9 @@ mod tests {
         assert!(names.contains(&"plex"));
         assert!(names.contains(&"sonarr"));
         assert!(names.contains(&"mariadb"));
+        assert!(names.contains(&"lidarr"));
+        assert!(names.contains(&"readarr"));
+        assert!(names.contains(&"homepage"));
     }
 
 }
