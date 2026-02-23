@@ -39,14 +39,16 @@ fn test_generate_compose_structure() {
     // 4. Verify Networks
     assert!(compose.networks.contains_key("aetheris_net"));
 
-    // 5. Verify Services Count (Should be 29)
-    assert_eq!(compose.services.len(), 29, "Expected 29 services");
+    // 5. Verify Services Count (Should be 31)
+    assert_eq!(compose.services.len(), 31, "Expected 31 services");
 
     // 6. Verify specific service (Plex, Jellyfin, Bazarr, Syncthing)
     assert!(compose.services.contains_key("plex"));
     assert!(compose.services.contains_key("jellyfin"));
     assert!(compose.services.contains_key("audiobookshelf"));
     assert!(compose.services.contains_key("bazarr"));
+    assert!(compose.services.contains_key("lidarr"));
+    assert!(compose.services.contains_key("readarr"));
     assert!(compose.services.contains_key("syncthing"));
 
     let plex = compose.services.get("plex").unwrap();
