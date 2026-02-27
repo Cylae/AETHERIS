@@ -458,6 +458,7 @@ async fn users_page(session: Session) -> impl IntoResponse {
 
         // Don't allow deleting self or last admin logic is handled in delete handler/manager
         // But let's show delete button generally
+        let escaped_username = escape_html(&u.username);
         html.push_str(&format!(r#"
             <tr>
                 <td>{}</td>
@@ -469,7 +470,7 @@ async fn users_page(session: Session) -> impl IntoResponse {
                     </form>
                 </td>
             </tr>
-        "#, u.username, u.role, quota_display, u.username));
+        "#, escaped_username, u.role, quota_display, escaped_username));
     }
 
     html.push_str("</tbody></table>");
@@ -583,5 +584,17 @@ fn run_cli_toggle(service: &str, enable: bool) {
         }
     } else {
         error!("Failed to determine current executable path.");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_escape_html_correctness() {
+        let input = r#"<script>alert("XSS")</script> & 'single'"#;
+        let expected = "&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt; &amp; &#39;single&#39;";
+        assert_eq!(escape_html(input), expected);
     }
 }
