@@ -19,6 +19,7 @@ use time::Duration;
 use sysinfo::{System, SystemExt, CpuExt, DiskExt};
 use tokio::sync::RwLock;
 use std::time::SystemTime;
+use crate::core::secrets;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct SessionUser {
@@ -27,6 +28,23 @@ struct SessionUser {
 }
 
 const SESSION_KEY: &str = "user";
+const CSRF_KEY: &str = "csrf_token";
+
+#[derive(Deserialize)]
+struct CsrfPayload {
+    csrf_token: String,
+}
+
+// Helper to get or create CSRF token
+async fn ensure_csrf_token(session: &Session) -> String {
+    if let Ok(Some(token)) = session.get::<String>(CSRF_KEY).await {
+        token
+    } else {
+        let token = secrets::generate_hex(32).unwrap_or_else(|_| "csrf-error".to_string());
+        session.insert(CSRF_KEY, token.clone()).await.ok();
+        token
+    }
+}
 
 struct CachedConfig {
     config: Config,
@@ -180,9 +198,14 @@ async fn login_handler(session: Session, Form(payload): Form<LoginPayload>) -> i
     }
 }
 
-async fn logout(session: Session) -> impl IntoResponse {
+async fn logout(session: Session, Form(csrf): Form<CsrfPayload>) -> impl IntoResponse {
+    let session_token = ensure_csrf_token(&session).await;
+    if csrf.csrf_token != session_token {
+        return (StatusCode::FORBIDDEN, "Access Denied: Invalid CSRF Token").into_response();
+    }
+
     session.delete().await.ok();
-    Redirect::to("/login")
+    Redirect::to("/login").into_response()
 }
 
 // Helper for HTML escaping
@@ -251,6 +274,7 @@ async fn dashboard(State(state): State<SharedState>, session: Session) -> impl I
         _ => return Redirect::to("/login").into_response(),
     };
 
+    let csrf_token = ensure_csrf_token(&session).await;
     let is_admin = matches!(user.role, Role::Admin);
     let escaped_username = escape_html(&user.username);
 
@@ -293,10 +317,11 @@ async fn dashboard(State(state): State<SharedState>, session: Session) -> impl I
         <div class="header">
             <h1>AETHERIS 🚀</h1>
             <form method="POST" action="/logout" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{}">
                 <button type="submit" class="btn btn-logout">Logout ({})</button>
             </form>
         </div>
-    "#, escaped_username);
+    "#, csrf_token, escaped_username);
 
     // Navigation
     if is_admin {
@@ -362,11 +387,13 @@ async fn dashboard(State(state): State<SharedState>, session: Session) -> impl I
         if is_admin {
              let _ = write!(html, r#"
                     <form method="POST" action="/api/services/{}/{}">
+                        <input type="hidden" name="csrf_token" value="{}">
                         <button type="submit" class="btn {}">{}</button>
                     </form>
              "#,
              name,
              if enabled { "disable" } else { "enable" },
+             csrf_token,
              if enabled { "btn-disable" } else { "btn-enable" },
              if enabled { "Disable" } else { "Enable" }
              );
@@ -398,16 +425,21 @@ async fn users_page(session: Session) -> impl IntoResponse {
         return Redirect::to("/").into_response();
     }
 
+    let csrf_token = ensure_csrf_token(&session).await;
     let user_manager = UserManager::load_async().await.unwrap_or_default();
     let mut html = html_head("User Management - AETHERIS");
 
-    html.push_str(r#"
+    let _ = write!(html, r#"
         <div class="header">
             <h1>User Management 👥</h1>
             <form method="POST" action="/logout">
+                <input type="hidden" name="csrf_token" value="{}">
                 <button type="submit" class="btn btn-logout">Logout</button>
             </form>
         </div>
+    "#, csrf_token);
+
+    html.push_str(r#"
         <div class="nav">
             <a href="/">Dashboard</a>
             <a href="/users">User Management</a>
@@ -415,6 +447,13 @@ async fn users_page(session: Session) -> impl IntoResponse {
 
         <h3>Add New User</h3>
         <form method="POST" action="/users/add" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end;">
+    "#);
+
+    let _ = write!(html, r#"
+            <input type="hidden" name="csrf_token" value="{}">
+    "#, csrf_token);
+
+    html.push_str(r#"
             <div>
                 <label>Username</label><br>
                 <input type="text" name="username" required style="width: 100%; padding: 8px;">
@@ -458,18 +497,19 @@ async fn users_page(session: Session) -> impl IntoResponse {
 
         // Don't allow deleting self or last admin logic is handled in delete handler/manager
         // But let's show delete button generally
-        html.push_str(&format!(r#"
+        let _ = write!(html, r#"
             <tr>
                 <td>{}</td>
                 <td>{:?}</td>
                 <td>{}</td>
                 <td>
                     <form method="POST" action="/users/delete/{}" onsubmit="return confirm('Are you sure you want to delete this user? This will delete their system account and data.');">
+                        <input type="hidden" name="csrf_token" value="{}">
                         <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
                 </td>
             </tr>
-        "#, u.username, u.role, quota_display, u.username));
+        "#, u.username, u.role, quota_display, u.username, csrf_token);
     }
 
     html.push_str("</tbody></table>");
@@ -484,6 +524,7 @@ struct AddUserPayload {
     password: String,
     role: String,
     quota: Option<u64>,
+    csrf_token: String,
 }
 
 async fn add_user_handler(session: Session, Form(payload): Form<AddUserPayload>) -> impl IntoResponse {
@@ -491,6 +532,11 @@ async fn add_user_handler(session: Session, Form(payload): Form<AddUserPayload>)
         Ok(Some(u)) => u,
         _ => return Redirect::to("/login").into_response(),
     };
+
+    let session_token = ensure_csrf_token(&session).await;
+    if payload.csrf_token != session_token {
+        return (StatusCode::FORBIDDEN, "Access Denied: Invalid CSRF Token").into_response();
+    }
 
     if !matches!(session_user.role, Role::Admin) {
         return (StatusCode::FORBIDDEN, "Access Denied").into_response();
@@ -519,11 +565,16 @@ async fn add_user_handler(session: Session, Form(payload): Form<AddUserPayload>)
     Redirect::to("/users").into_response()
 }
 
-async fn delete_user_handler(session: Session, Path(username): Path<String>) -> impl IntoResponse {
+async fn delete_user_handler(session: Session, Path(username): Path<String>, Form(csrf): Form<CsrfPayload>) -> impl IntoResponse {
     let session_user: SessionUser = match session.get(SESSION_KEY).await {
         Ok(Some(u)) => u,
         _ => return Redirect::to("/login").into_response(),
     };
+
+    let session_token = ensure_csrf_token(&session).await;
+    if csrf.csrf_token != session_token {
+        return (StatusCode::FORBIDDEN, "Access Denied: Invalid CSRF Token").into_response();
+    }
 
     if !matches!(session_user.role, Role::Admin) {
         return (StatusCode::FORBIDDEN, "Access Denied").into_response();
@@ -540,19 +591,24 @@ async fn delete_user_handler(session: Session, Path(username): Path<String>) -> 
     Redirect::to("/users").into_response()
 }
 
-async fn enable_service(session: Session, Path(name): Path<String>) -> impl IntoResponse {
-    check_admin_role(session, &name, true).await
+async fn enable_service(session: Session, Path(name): Path<String>, Form(csrf): Form<CsrfPayload>) -> impl IntoResponse {
+    check_admin_role(session, &name, true, csrf.csrf_token).await
 }
 
-async fn disable_service(session: Session, Path(name): Path<String>) -> impl IntoResponse {
-    check_admin_role(session, &name, false).await
+async fn disable_service(session: Session, Path(name): Path<String>, Form(csrf): Form<CsrfPayload>) -> impl IntoResponse {
+    check_admin_role(session, &name, false, csrf.csrf_token).await
 }
 
-async fn check_admin_role(session: Session, name: &str, enable: bool) -> impl IntoResponse {
+async fn check_admin_role(session: Session, name: &str, enable: bool, token: String) -> impl IntoResponse {
     let user: SessionUser = match session.get(SESSION_KEY).await {
         Ok(Some(u)) => u,
         _ => return Redirect::to("/login").into_response(),
     };
+
+    let session_token = ensure_csrf_token(&session).await;
+    if token != session_token {
+        return (StatusCode::FORBIDDEN, "Access Denied: Invalid CSRF Token").into_response();
+    }
 
     if !matches!(user.role, Role::Admin) {
         return (StatusCode::FORBIDDEN, "Access Denied: Admin role required").into_response();
