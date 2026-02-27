@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use anyhow::{Result, Context, anyhow};
 use log::{info, warn};
 use bcrypt::{DEFAULT_COST, hash, verify};
@@ -27,19 +27,27 @@ pub struct UserManager {
     users: HashMap<String, User>,
 }
 
+fn get_users_path() -> PathBuf {
+    if let Ok(home) = std::env::var("AETHERIS_HOME") {
+        return Path::new(&home).join("users.yaml");
+    }
+    PathBuf::from("users.yaml")
+}
+
 impl UserManager {
     pub async fn load_async() -> Result<Self> {
         tokio::task::spawn_blocking(Self::load).await?
     }
 
     pub fn load() -> Result<Self> {
-        let path = Path::new("users.yaml");
+        let path = get_users_path();
         let fallback_path = Path::new("/opt/aetheris/users.yaml");
 
         let load_path = if path.exists() {
-            Some(path)
-        } else if fallback_path.exists() {
-            Some(fallback_path)
+            Some(path.as_path())
+        } else if fallback_path.exists() && std::env::var("AETHERIS_HOME").is_err() {
+            // Only fallback if AETHERIS_HOME is not set, otherwise we strictly use AETHERIS_HOME
+             Some(fallback_path)
         } else {
             None
         };
@@ -73,10 +81,12 @@ impl UserManager {
     }
 
     pub fn save(&self) -> Result<()> {
-        let target = if Path::new("/opt/aetheris").exists() {
-             Path::new("/opt/aetheris/users.yaml")
+        let target = if std::env::var("AETHERIS_HOME").is_ok() {
+            get_users_path()
+        } else if Path::new("/opt/aetheris").exists() {
+             Path::new("/opt/aetheris/users.yaml").to_path_buf()
         } else {
-             Path::new("users.yaml")
+             Path::new("users.yaml").to_path_buf()
         };
 
         let content = serde_yaml_ng::to_string(self)?;

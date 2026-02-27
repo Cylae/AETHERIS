@@ -20,6 +20,8 @@ static CONFIG_CACHE: OnceLock<RwLock<CachedConfig>> = OnceLock::new();
 pub struct Config {
     #[serde(default)]
     pub disabled_services: HashSet<String>,
+    #[serde(default)]
+    pub secure_sessions: bool,
 }
 
 fn get_config_path() -> PathBuf {

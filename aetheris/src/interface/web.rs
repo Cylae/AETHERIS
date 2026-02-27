@@ -19,6 +19,7 @@ use time::Duration;
 use sysinfo::{System, SystemExt, CpuExt, DiskExt};
 use tokio::sync::RwLock;
 use std::time::SystemTime;
+use tower_sessions::cookie::SameSite;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct SessionUser {
@@ -77,18 +78,24 @@ impl AppState {
 }
 
 pub async fn start_server(port: u16) -> anyhow::Result<()> {
+    let initial_config = Config::load().unwrap_or_default();
+    let initial_mtime = std::fs::metadata("config.yaml").ok().and_then(|m| m.modified().ok());
+
+    let is_secure = std::env::var("AETHERIS_SECURE_SESSIONS")
+        .map(|v| v.eq_ignore_ascii_case("true"))
+        .unwrap_or(initial_config.secure_sessions);
+
+
     // Session setup
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false) // Localhost/LAN, http usually
+        .with_secure(is_secure)
+        .with_same_site(SameSite::Lax)
         .with_expiry(Expiry::OnInactivity(Duration::hours(24)));
 
     // Initialize System once
     let mut sys = System::new_all();
     sys.refresh_all();
-
-    let initial_config = Config::load().unwrap_or_default();
-    let initial_mtime = std::fs::metadata("config.yaml").ok().and_then(|m| m.modified().ok());
 
     let app_state = Arc::new(AppState {
         system: Mutex::new(sys),
