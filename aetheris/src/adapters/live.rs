@@ -19,10 +19,62 @@ impl RuntimePort for LiveAdapter {
     }
 
     async fn install_docker(&self) -> Result<()> {
-        let status = Command::new("curl").args(["-fsSL", "https://get.docker.com", "-o", "get-docker.sh"]).status()?;
-        if !status.success() { bail!("Failed to download docker install script"); }
-        let status = Command::new("sh").arg("get-docker.sh").status()?;
-        if !status.success() { bail!("Failed to execute docker install script"); }
+        if which("apt-get").is_err() {
+            bail!("apt-get not found. This tool supports Debian/Ubuntu based systems only.");
+        }
+
+        // 1. Install prerequisites
+        Command::new("apt-get").arg("update").status()?;
+        let status = Command::new("apt-get")
+            .args(["install", "-y", "ca-certificates", "curl", "gnupg", "lsb-release"])
+            .status()?;
+        if !status.success() { bail!("Failed to install prerequisites"); }
+
+        // 2. Identify Distribution and Architecture
+        let output = Command::new("lsb_release").arg("-is").output()?;
+        let distro = String::from_utf8(output.stdout)?.trim().to_lowercase();
+
+        let output = Command::new("lsb_release").arg("-cs").output()?;
+        let codename = String::from_utf8(output.stdout)?.trim().to_string();
+
+        let output = Command::new("dpkg").arg("--print-architecture").output()?;
+        let arch = String::from_utf8(output.stdout)?.trim().to_string();
+
+        // 3. Setup Docker Repository
+        fs::create_dir_all("/etc/apt/keyrings")?;
+        let keyring_path = "/etc/apt/keyrings/docker.gpg";
+        if Path::new(keyring_path).exists() {
+            fs::remove_file(keyring_path)?;
+        }
+
+        let gpg_url = format!("https://download.docker.com/linux/{}/gpg", distro);
+        let status = Command::new("curl")
+            .args(["-fsSL", &gpg_url, "-o", "/tmp/docker.gpg"])
+            .status()?;
+        if !status.success() { bail!("Failed to download Docker GPG key from {}", gpg_url); }
+
+        let status = Command::new("gpg")
+            .args(["--dearmor", "-o", keyring_path, "/tmp/docker.gpg"])
+            .status()?;
+        if !status.success() { bail!("Failed to dearmor Docker GPG key"); }
+        let _ = fs::remove_file("/tmp/docker.gpg");
+
+        let status = Command::new("chmod").args(["a+r", keyring_path]).status()?;
+        if !status.success() { bail!("Failed to set permissions on Docker GPG key"); }
+
+        let repo_line = format!(
+            "deb [arch={} signed-by={}] https://download.docker.com/linux/{} {} stable",
+            arch, keyring_path, distro, codename
+        );
+        fs::write("/etc/apt/sources.list.d/docker.list", repo_line)?;
+
+        // 4. Install Docker
+        Command::new("apt-get").arg("update").status()?;
+        let status = Command::new("apt-get")
+            .args(["install", "-y", "docker-ce", "docker-ce-cli", "containerd.io", "docker-buildx-plugin", "docker-compose-plugin"])
+            .status()?;
+        if !status.success() { bail!("Failed to install Docker packages"); }
+
         Ok(())
     }
 
