@@ -28,12 +28,17 @@ bcrypt = "0.15"
 tower-sessions = "0.12"
 time = "0.3"
 rpassword = "7.3"
+html-escape = "0.2.13"
 
 [dev-dependencies]
 criterion = "0.5"
 
 [[bench]]
 name = "service_benchmark"
+harness = false
+
+[[bench]]
+name = "escape_benchmark"
 harness = false
 
 [workspace]

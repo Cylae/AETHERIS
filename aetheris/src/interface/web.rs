@@ -19,6 +19,7 @@ use time::Duration;
 use sysinfo::{System, SystemExt, CpuExt, DiskExt};
 use tokio::sync::RwLock;
 use std::time::SystemTime;
+use html_escape;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct SessionUser {
@@ -187,18 +188,7 @@ async fn logout(session: Session) -> impl IntoResponse {
 
 // Helper for HTML escaping
 fn escape_html(s: &str) -> String {
-    let mut output = String::with_capacity(s.len() + 10);
-    for c in s.chars() {
-        match c {
-            '&' => output.push_str("&amp;"),
-            '<' => output.push_str("&lt;"),
-            '>' => output.push_str("&gt;"),
-            '"' => output.push_str("&quot;"),
-            '\'' => output.push_str("&#39;"),
-            _ => output.push(c),
-        }
-    }
-    output
+    html_escape::encode_safe(s).into_owned()
 }
 
 // Helper for common HTML head
