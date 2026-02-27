@@ -186,19 +186,21 @@ async fn logout(session: Session) -> impl IntoResponse {
 }
 
 // Helper for HTML escaping
+// Optimized bytes-based implementation for better performance
 fn escape_html(s: &str) -> String {
-    let mut output = String::with_capacity(s.len() + 10);
-    for c in s.chars() {
-        match c {
-            '&' => output.push_str("&amp;"),
-            '<' => output.push_str("&lt;"),
-            '>' => output.push_str("&gt;"),
-            '"' => output.push_str("&quot;"),
-            '\'' => output.push_str("&#39;"),
-            _ => output.push(c),
+    let mut output = Vec::with_capacity(s.len() + 20); // Heuristic
+    for b in s.bytes() {
+        match b {
+            b'&' => output.extend_from_slice(b"&amp;"),
+            b'<' => output.extend_from_slice(b"&lt;"),
+            b'>' => output.extend_from_slice(b"&gt;"),
+            b'"' => output.extend_from_slice(b"&quot;"),
+            b'\'' => output.extend_from_slice(b"&#39;"),
+            _ => output.push(b),
         }
     }
-    output
+    // SAFETY: Input is &str (valid UTF-8), and we only append ASCII bytes.
+    unsafe { String::from_utf8_unchecked(output) }
 }
 
 // Helper for common HTML head
