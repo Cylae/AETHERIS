@@ -21,12 +21,14 @@ impl AetherisOrchestrator {
 
         self.system.check_root()?;
 
-        let install_dir = Path::new("/opt/aetheris");
+        let install_path_env = std::env::var("AETHERIS_HOME").unwrap_or_else(|_| "/opt/aetheris".to_string());
+        let install_dir = Path::new(&install_path_env);
+
         if !self.system.file_exists(install_dir) {
-            info!("Creating installation directory at /opt/aetheris...");
-            self.system.create_dir_all(install_dir).context("Failed to create /opt/aetheris")?;
+            info!("Creating installation directory at {:?}...", install_dir);
+            self.system.create_dir_all(install_dir).with_context(|| format!("Failed to create {:?}", install_dir))?;
         }
-        std::env::set_current_dir(install_dir).context("Failed to chdir to /opt/aetheris")?;
+        std::env::set_current_dir(install_dir).with_context(|| format!("Failed to chdir to {:?}", install_dir))?;
 
         let specs = self.runtime.detect_hardware();
         let (uid, gid) = self.runtime.detect_user_context();

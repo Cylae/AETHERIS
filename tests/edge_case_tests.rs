@@ -8,6 +8,105 @@ use aetheris_core::core::secrets::Secrets;
 use aetheris_core::core::config::Config;
 use aetheris_core::core::users::{UserManager, Role};
 use aetheris_core::build_compose_structure;
+use aetheris_core::ports::{RuntimePort, SystemPort, HardwareSpecs};
+use aetheris_core::domain::orchestrator::AetherisOrchestrator;
+use anyhow::{Result, bail, Context};
+use async_trait::async_trait;
+use std::path::Path;
+use std::sync::Mutex;
+
+// ============================================================================
+// TEST MOCKS
+// ============================================================================
+
+pub struct MockFailureRuntime {
+    pub specs: HardwareSpecs,
+    pub fail_docker_pull: bool,
+}
+
+impl Default for MockFailureRuntime {
+    fn default() -> Self {
+        Self {
+            specs: HardwareSpecs {
+                ram_gb: 8,
+                swap_gb: 2,
+                cpu_cores: 4,
+                disk_gb: 512,
+                has_nvidia: false,
+                has_intel_quicksync: false,
+            },
+            fail_docker_pull: false,
+        }
+    }
+}
+
+#[async_trait]
+impl RuntimePort for MockFailureRuntime {
+    fn is_docker_installed(&self) -> bool { true }
+    async fn install_docker(&self) -> Result<()> { Ok(()) }
+    async fn run_compose_up(&self, _workdir: &Path) -> Result<()> {
+        if self.fail_docker_pull {
+            bail!("Simulated Network Failure: Docker pull failed");
+        }
+        Ok(())
+    }
+    fn detect_hardware(&self) -> HardwareSpecs { self.specs.clone() }
+    fn detect_user_context(&self) -> (String, String) {
+        ("1000".to_string(), "1000".to_string())
+    }
+}
+
+pub struct MockFailureSystem {
+    pub fail_write_path_contains: Option<String>,
+}
+
+impl Default for MockFailureSystem {
+    fn default() -> Self {
+        Self {
+            fail_write_path_contains: None,
+        }
+    }
+}
+
+#[async_trait]
+impl SystemPort for MockFailureSystem {
+    fn check_root(&self) -> Result<()> { Ok(()) }
+    async fn install_packages(&self, _pkgs: Vec<String>) -> Result<()> { Ok(()) }
+    async fn apply_optimizations(&self, _ram_gb: u64) -> Result<()> { Ok(()) }
+    async fn configure_firewall(&self) -> Result<()> { Ok(()) }
+    async fn create_user(&self, _u: &str, _p: &str) -> Result<()> { Ok(()) }
+    async fn delete_user(&self, _u: &str) -> Result<()> { Ok(()) }
+    async fn set_password(&self, _u: &str, _p: &str) -> Result<()> { Ok(()) }
+    async fn set_quota(&self, _u: &str, _q: u64) -> Result<()> { Ok(()) }
+    fn get_uid(&self, _u: &str) -> Result<u32> { Ok(1000) }
+
+    fn write_file(&self, path: &Path, content: &str) -> Result<()> {
+        if let Some(ref fail_pattern) = self.fail_write_path_contains {
+            if path.to_string_lossy().contains(fail_pattern) {
+                bail!("Simulated IO Failure: Failed to write to protected path");
+            }
+        }
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(path, content)?;
+        Ok(())
+    }
+
+    fn create_dir_all(&self, path: &Path) -> Result<()> {
+        std::fs::create_dir_all(path)?;
+        Ok(())
+    }
+
+    fn file_exists(&self, path: &Path) -> bool {
+        path.exists()
+    }
+
+    async fn stop_and_disable_service(&self, _name: &str) -> Result<()> { Ok(()) }
+}
+
+// Global lock to prevent environment variable race conditions in tests
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 // ============================================================================
 // UNICODE AND SPECIAL CHARACTER TESTS
@@ -329,18 +428,87 @@ fn test_resource_limits_on_minimal_hardware() {
 // Note: These would require mocking network calls
 // Left as TODOs for integration with actual network failure simulation
 
-#[ignore]
-#[test]
-fn test_docker_pull_network_failure() {
-    // Simulate network failure during docker pull
-    // Verify graceful error handling
+#[tokio::test]
+async fn test_docker_pull_network_failure() {
+    let _guard = ENV_LOCK.lock().unwrap();
+
+    // Setup temporary directory
+    let temp_dir = std::env::temp_dir().join("aetheris_test_network_failure");
+    if temp_dir.exists() {
+        std::fs::remove_dir_all(&temp_dir).unwrap();
+    }
+    std::fs::create_dir_all(&temp_dir).unwrap();
+
+    // Set AETHERIS_HOME
+    std::env::set_var("AETHERIS_HOME", &temp_dir);
+
+    // Create runtime mock that fails docker pull
+    let runtime = Box::new(MockFailureRuntime {
+        fail_docker_pull: true,
+        ..Default::default()
+    });
+
+    // Create system mock
+    let system = Box::new(MockFailureSystem::default());
+
+    let orchestrator = AetherisOrchestrator::new(runtime, system);
+
+    // Run install
+    let result = orchestrator.install().await;
+
+    // Verify failure
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Simulated Network Failure") || err_msg.contains("Docker pull failed"));
+
+    // Cleanup
+    std::fs::remove_dir_all(&temp_dir).ok();
+    std::env::remove_var("AETHERIS_HOME");
 }
 
-#[ignore]
-#[test]
-fn test_partial_service_deployment() {
-    // Some services succeed, some fail
-    // Verify system state is consistent
+#[tokio::test]
+async fn test_partial_service_deployment() {
+    let _guard = ENV_LOCK.lock().unwrap();
+
+    // Setup temporary directory
+    let temp_dir = std::env::temp_dir().join("aetheris_test_partial_deployment");
+    if temp_dir.exists() {
+        std::fs::remove_dir_all(&temp_dir).unwrap();
+    }
+    std::fs::create_dir_all(&temp_dir).unwrap();
+
+    // Set AETHERIS_HOME
+    std::env::set_var("AETHERIS_HOME", &temp_dir);
+
+    // Create runtime mock (success)
+    let runtime = Box::new(MockFailureRuntime::default());
+
+    // Create system mock that fails writing config for "mariadb"
+    let system = Box::new(MockFailureSystem {
+        fail_write_path_contains: Some("mariadb".to_string()),
+    });
+
+    let orchestrator = AetherisOrchestrator::new(runtime, system);
+
+    // Run install
+    let result = orchestrator.install().await;
+
+    // Verify failure
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("Simulated IO Failure") || err_msg.contains("Failed to write to protected path"));
+
+    // Verify system state consistency
+    // 1. Install directory should exist
+    assert!(temp_dir.exists());
+
+    // 2. docker-compose.yml should NOT exist because process failed before generation
+    let compose_path = temp_dir.join("docker-compose.yml");
+    assert!(!compose_path.exists(), "docker-compose.yml should not exist if service configuration failed");
+
+    // Cleanup
+    std::fs::remove_dir_all(&temp_dir).ok();
+    std::env::remove_var("AETHERIS_HOME");
 }
 
 // ============================================================================
