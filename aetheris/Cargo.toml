@@ -30,10 +30,14 @@ time = "0.3"
 rpassword = "7.3"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = { version = "0.5", features = ["async_tokio"] }
 
 [[bench]]
 name = "service_benchmark"
+harness = false
+
+[[bench]]
+name = "io_benchmark"
 harness = false
 
 [workspace]

@@ -97,8 +97,8 @@ impl SystemPort for LiveAdapter {
         let swappiness = if ram_gb > 16 { 1 } else { 10 };
         let config = format!("vm.swappiness={}\nfs.inotify.max_user_watches=524288\n", swappiness);
         let path = Path::new("/etc/sysctl.d/99-aetheris-optimization.conf");
-        fs::write(path, config)?;
-        Command::new("sysctl").arg("--system").status()?;
+        tokio::fs::write(path, config).await?;
+        tokio::process::Command::new("sysctl").arg("--system").status().await?;
         Ok(())
     }
 
