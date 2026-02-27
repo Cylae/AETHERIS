@@ -95,5 +95,9 @@ cargo test
 
 The test suite automatically utilizes the `MockRuntime` to verify orchestrator logic and service configurations, including file generation and security settings.
 
+## ⚡ Performance Optimization
+
+AETHERIS optimizes `docker-compose.yml` generation by serializing environment variables and labels as deterministic BTreeMaps, eliminating unnecessary string allocation overhead during the configuration process.
+
 ---
 **Project AETHERIS** - *The Environment-Agnostic Orchestrator.*

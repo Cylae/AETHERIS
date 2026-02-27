@@ -119,7 +119,7 @@ fn test_profile_logic_low() {
     let envs = mail.environment.as_ref().unwrap();
 
     // Check for ENABLE_SPAMASSASSIN=0
-    let has_disabled_spam = envs.iter().any(|v| v == "ENABLE_SPAMASSASSIN=0");
+    let has_disabled_spam = envs.get("ENABLE_SPAMASSASSIN") == Some(&"0".to_string());
     assert!(has_disabled_spam, "Low profile should disable SpamAssassin");
 }
 
@@ -145,7 +145,7 @@ fn test_profile_logic_standard() {
     let envs = mail.environment.as_ref().unwrap();
 
     // Check for ENABLE_SPAMASSASSIN=1
-    let has_enabled_spam = envs.iter().any(|v| v == "ENABLE_SPAMASSASSIN=1");
+    let has_enabled_spam = envs.get("ENABLE_SPAMASSASSIN") == Some(&"1".to_string());
     assert!(has_enabled_spam, "Standard profile should enable SpamAssassin");
 }
 

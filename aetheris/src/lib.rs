@@ -34,7 +34,7 @@ pub fn build_compose_structure(hw: &hardware::HardwareInfo, secrets: &secrets::S
 
         let envs = service_impl.env_vars(hw, secrets);
         let environment = if envs.is_empty() { None } else {
-            Some(envs.into_iter().map(|(k, v)| format!("{}={}", k, v)).collect())
+            Some(envs.into_iter().collect())
         };
 
         let vols = service_impl.volumes(hw);
@@ -62,7 +62,7 @@ pub fn build_compose_structure(hw: &hardware::HardwareInfo, secrets: &secrets::S
 
         let labels_map = service_impl.labels();
         let labels = if labels_map.is_empty() { None } else {
-            Some(labels_map.into_iter().map(|(k, v)| format!("{}={}", k, v)).collect())
+            Some(labels_map.into_iter().collect())
         };
 
         let caps = service_impl.cap_add();
