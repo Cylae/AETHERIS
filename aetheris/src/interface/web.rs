@@ -17,7 +17,6 @@ use tower_sessions::{Expiry, MemoryStore, Session, SessionManagerLayer};
 use serde::{Deserialize, Serialize};
 use time::Duration;
 use sysinfo::{System, SystemExt, CpuExt, DiskExt};
-use tokio::sync::RwLock;
 use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -28,51 +27,16 @@ struct SessionUser {
 
 const SESSION_KEY: &str = "user";
 
-struct CachedConfig {
-    config: Config,
-    last_modified: Option<SystemTime>,
-}
-
 struct AppState {
     system: Mutex<System>,
     last_system_refresh: Mutex<SystemTime>,
-    config_cache: RwLock<CachedConfig>,
 }
 
 type SharedState = Arc<AppState>;
 
 impl AppState {
     async fn get_config(&self) -> Config {
-        // Fast path: check metadata
-        let current_mtime = tokio::fs::metadata("config.yaml").await
-            .and_then(|m| m.modified())
-            .ok();
-
-        {
-            let cache = self.config_cache.read().await;
-            if cache.last_modified == current_mtime {
-                return cache.config.clone();
-            }
-        }
-
-        // Slow path: reload
-        let mut cache = self.config_cache.write().await;
-
-        // Re-check mtime under write lock to avoid race
-        let current_mtime_2 = tokio::fs::metadata("config.yaml").await
-            .and_then(|m| m.modified())
-            .ok();
-
-        if cache.last_modified == current_mtime_2 {
-            return cache.config.clone();
-        }
-
-        if let Ok(cfg) = Config::load_async().await {
-            cache.config = cfg;
-            cache.last_modified = current_mtime_2;
-        }
-
-        cache.config.clone()
+        Config::load_async().await.unwrap_or_default()
     }
 }
 
@@ -87,16 +51,9 @@ pub async fn start_server(port: u16) -> anyhow::Result<()> {
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    let initial_config = Config::load().unwrap_or_default();
-    let initial_mtime = std::fs::metadata("config.yaml").ok().and_then(|m| m.modified().ok());
-
     let app_state = Arc::new(AppState {
         system: Mutex::new(sys),
         last_system_refresh: Mutex::new(SystemTime::now()),
-        config_cache: RwLock::new(CachedConfig {
-            config: initial_config,
-            last_modified: initial_mtime,
-        }),
     });
 
     let app = Router::new()
