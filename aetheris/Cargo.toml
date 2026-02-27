@@ -36,6 +36,10 @@ criterion = "0.5"
 name = "service_benchmark"
 harness = false
 
+[[bench]]
+name = "io_benchmark"
+harness = false
+
 [workspace]
 members = ["."]
 
