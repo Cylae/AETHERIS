@@ -26,6 +26,17 @@ struct SessionUser {
     role: Role,
 }
 
+#[derive(Serialize, Clone)]
+struct DashboardStats {
+    cpu_usage: f32,
+    ram_used: u64,
+    ram_total: u64,
+    swap_used: u64,
+    swap_total: u64,
+    disk_used: u64,
+    disk_total: u64,
+}
+
 const SESSION_KEY: &str = "user";
 
 struct CachedConfig {
@@ -34,8 +45,8 @@ struct CachedConfig {
 }
 
 struct AppState {
-    system: Mutex<System>,
-    last_system_refresh: Mutex<SystemTime>,
+    system: Arc<Mutex<System>>,
+    last_system_refresh: Arc<Mutex<SystemTime>>,
     config_cache: RwLock<CachedConfig>,
 }
 
@@ -91,8 +102,8 @@ pub async fn start_server(port: u16) -> anyhow::Result<()> {
     let initial_mtime = std::fs::metadata("config.yaml").ok().and_then(|m| m.modified().ok());
 
     let app_state = Arc::new(AppState {
-        system: Mutex::new(sys),
-        last_system_refresh: Mutex::new(SystemTime::now()),
+        system: Arc::new(Mutex::new(sys)),
+        last_system_refresh: Arc::new(Mutex::new(SystemTime::now())),
         config_cache: RwLock::new(CachedConfig {
             config: initial_config,
             last_modified: initial_mtime,
@@ -257,35 +268,50 @@ async fn dashboard(State(state): State<SharedState>, session: Session) -> impl I
     let services = services::get_all_services();
     let config = state.get_config().await;
 
-    // System Stats
-    let mut sys = state.system.lock().unwrap();
-    let now = SystemTime::now();
-    let mut last_refresh = state.last_system_refresh.lock().unwrap();
+    // Offload System Stats gathering to a blocking task
+    let system_lock = state.system.clone();
+    let refresh_lock = state.last_system_refresh.clone();
 
-    // Throttle refresh to max once every 500ms
-    if now.duration_since(*last_refresh).unwrap_or_default().as_millis() > 500 {
-        sys.refresh_cpu();
-        sys.refresh_memory();
-        sys.refresh_disks();
-        *last_refresh = now;
-    }
-    let ram_used = sys.used_memory() / 1024 / 1024; // MB
-    let ram_total = sys.total_memory() / 1024 / 1024; // MB
-    let swap_used = sys.used_swap() / 1024 / 1024; // MB
-    let swap_total = sys.total_swap() / 1024 / 1024; // MB
-    let cpu_usage = sys.global_cpu_info().cpu_usage();
+    let stats = tokio::task::spawn_blocking(move || {
+        let mut sys = system_lock.lock().unwrap();
+        let mut last_refresh = refresh_lock.lock().unwrap();
+        let now = SystemTime::now();
 
-    // Simple Disk Usage (Root)
-    let mut disk_total = 0;
-    let mut disk_used = 0;
-    for disk in sys.disks() {
-        if disk.mount_point() == std::path::Path::new("/") {
-            disk_total = disk.total_space() / 1024 / 1024 / 1024; // GB
-            disk_used = (disk.total_space() - disk.available_space()) / 1024 / 1024 / 1024; // GB
-            break;
+        // Throttle refresh to max once every 500ms
+        if now.duration_since(*last_refresh).unwrap_or_default().as_millis() > 500 {
+            sys.refresh_cpu();
+            sys.refresh_memory();
+            sys.refresh_disks();
+            *last_refresh = now;
         }
-    }
-    drop(sys); // Release lock explicitely
+
+        let ram_used = sys.used_memory() / 1024 / 1024; // MB
+        let ram_total = sys.total_memory() / 1024 / 1024; // MB
+        let swap_used = sys.used_swap() / 1024 / 1024; // MB
+        let swap_total = sys.total_swap() / 1024 / 1024; // MB
+        let cpu_usage = sys.global_cpu_info().cpu_usage();
+
+        // Simple Disk Usage (Root)
+        let mut disk_total = 0;
+        let mut disk_used = 0;
+        for disk in sys.disks() {
+            if disk.mount_point() == std::path::Path::new("/") {
+                disk_total = disk.total_space() / 1024 / 1024 / 1024; // GB
+                disk_used = (disk.total_space() - disk.available_space()) / 1024 / 1024 / 1024; // GB
+                break;
+            }
+        }
+
+        DashboardStats {
+            cpu_usage,
+            ram_used,
+            ram_total,
+            swap_used,
+            swap_total,
+            disk_used,
+            disk_total,
+        }
+    }).await.unwrap();
 
     let mut html = html_head("Dashboard - AETHERIS");
 
@@ -328,7 +354,7 @@ async fn dashboard(State(state): State<SharedState>, session: Session) -> impl I
                 <div class="stat-value">{} / {} GB</div>
             </div>
         </div>
-    "#, cpu_usage, ram_used, ram_total, swap_used, swap_total, disk_used, disk_total);
+    "#, stats.cpu_usage, stats.ram_used, stats.ram_total, stats.swap_used, stats.swap_total, stats.disk_used, stats.disk_total);
 
     // Services Table
     html.push_str(r#"
