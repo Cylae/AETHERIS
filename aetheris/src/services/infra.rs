@@ -97,6 +97,33 @@ max_connections={}
     }
 }
 
+pub struct HomepageService;
+#[async_trait]
+impl Service for HomepageService {
+    fn name(&self) -> &'static str { "homepage" }
+    fn image(&self) -> &'static str { "ghcr.io/gethomepage/homepage:latest" }
+    fn ports(&self) -> Vec<String> { vec!["127.0.0.1:3002:3000".to_string()] }
+    fn volumes(&self, _hw: &HardwareInfo) -> Vec<String> {
+        vec![
+            "./config/homepage:/app/config".to_string(),
+            "/var/run/docker.sock:/var/run/docker.sock:ro".to_string()
+        ]
+    }
+    fn resources(&self, hw: &HardwareInfo) -> Option<ResourceConfig> {
+        let memory_limit = match hw.profile {
+            HardwareProfile::High => "512M",
+            HardwareProfile::Standard => "256M",
+            HardwareProfile::Low => "128M",
+        };
+        Some(ResourceConfig {
+            memory_limit: Some(memory_limit.to_string()),
+            memory_reservation: None,
+            cpu_limit: None,
+            cpu_reservation: None,
+        })
+    }
+}
+
 pub struct RedisService;
 #[async_trait]
 impl Service for RedisService {
