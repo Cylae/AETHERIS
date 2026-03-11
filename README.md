@@ -41,6 +41,7 @@ AETHERIS is an industrial-grade, environment-agnostic server stack orchestrator 
 - Wireguard
 - Portainer
 - Netdata
+- Homepage
 - UptimeKuma
 
 ### Apps
