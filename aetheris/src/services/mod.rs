@@ -89,6 +89,7 @@ pub fn get_all_services() -> &'static [Box<dyn Service>] {
         Box::new(infra::WireguardService),
         Box::new(infra::PortainerService),
         Box::new(infra::NetdataService),
+        Box::new(infra::HomepageService),
         Box::new(infra::UptimeKumaService),
         Box::new(infra::HomepageService),
         Box::new(apps::VaultwardenService),
