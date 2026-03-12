@@ -12,6 +12,7 @@ AETHERIS is an industrial-grade, environment-agnostic server stack orchestrator 
 - **Idempotent Installation:** Safe to run multiple times; ensures the desired state.
 - **Resource Optimized:** Automatically tunes service resources based on hardware profiles (Low, Standard, High).
 - **Security First:** Generates secure, random secrets and strictly manages system user quotas and permissions.
+- **Deterministic Generation:** Uses BTreeMap for environment variables and labels in compose generation to eliminate string formatting overhead and ensure deterministic Docker Compose YAML serialization.
 
 ## 📦 Supported Services
 
