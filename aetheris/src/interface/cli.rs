@@ -53,6 +53,9 @@ pub enum UserCommands {
 }
 
 /// Securely reads a password from stdin without echoing characters.
+/// Returns an error if the password is empty or if reading fails.
+///
+/// SECURITY FIX v1.0.5: Prevents password visibility in terminal and shell history
 fn read_password_securely(prompt: &str) -> Result<String> {
     print!("{}", prompt);
     io::stdout().flush()?;
