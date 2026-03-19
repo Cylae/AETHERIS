@@ -127,25 +127,155 @@ async fn login_page(session: Session) -> impl IntoResponse {
 
     let html = r#"
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="theme-color" content="\#0a0a0a">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <title>Login - AETHERIS</title>
+        <script>
+            function getTheme() { return localStorage.getItem('theme') || 'dark'; }
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+            }
+            function toggleTheme() {
+                setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+            }
+            setTheme(getTheme());
+        </script>
         <style>
-            body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f4f4; }
-            .login-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 300px; }
-            input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-            button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-            button:hover { background-color: #0056b3; }
+            :root {
+                --bg-color: #ffffff;
+                --text-color: #111111;
+                --card-bg: #f9f9f9;
+                --border-color: #cccccc;
+                --input-bg: #ffffff;
+                --input-text: #111111;
+                --primary: #00f0ff;
+                --secondary: #8a2be2;
+                --neon-glow: rgba(0, 240, 255, 0.4);
+                --btn-text: #ffffff;
+            }
+            [data-theme="dark"] {
+                --bg-color: #0a0a0a;
+                --text-color: #e0e0e0;
+                --card-bg: #141414;
+                --border-color: #333333;
+                --input-bg: #1a1a1a;
+                --input-text: #e0e0e0;
+                --neon-glow: rgba(0, 240, 255, 0.7);
+            }
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: var(--bg-color);
+                color: var(--text-color);
+                background-image: linear-gradient(var(--border-color) 1px, transparent 1px), linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+                background-size: 40px 40px;
+                background-position: center center;
+                transition: background-color 0.3s, color 0.3s;
+            }
+            [data-theme="dark"] body {
+                background-image: linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+            }
+            .login-box {
+                background: var(--card-bg);
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 0 20px var(--neon-glow);
+                width: 320px;
+                border: 1px solid var(--border-color);
+                position: relative;
+            }
+            [data-theme="dark"] .login-box {
+                border-image: linear-gradient(45deg, var(--primary), var(--secondary)) 1;
+                border-width: 2px;
+                border-style: solid;
+            }
+            h2 {
+                text-align: center;
+                margin-top: 0;
+                color: var(--primary);
+                text-shadow: 0 0 10px var(--neon-glow);
+                letter-spacing: 2px;
+                text-transform: uppercase;
+            }
+            input {
+                width: 100%;
+                padding: 12px;
+                margin: 10px 0;
+                box-sizing: border-box;
+                background: var(--input-bg);
+                color: var(--input-text);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                outline: none;
+                transition: box-shadow 0.3s, border-color 0.3s;
+            }
+            input:focus {
+                border-color: var(--primary);
+                box-shadow: 0 0 8px var(--neon-glow);
+            }
+            .btn {
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(90deg, var(--secondary), var(--primary));
+                color: var(--btn-text);
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                transition: box-shadow 0.3s, transform 0.1s;
+            }
+            .btn:hover {
+                box-shadow: 0 0 15px var(--neon-glow);
+            }
+            .btn:active {
+                transform: scale(0.98);
+            }
+            .theme-toggle-container {
+                text-align: center;
+                margin-top: 20px;
+            }
+            .btn-toggle {
+                background: transparent;
+                border: 1px solid var(--primary);
+                color: var(--primary);
+                padding: 8px 16px;
+                cursor: pointer;
+                border-radius: 4px;
+                text-transform: uppercase;
+                font-size: 0.8em;
+                letter-spacing: 1px;
+                transition: all 0.3s;
+            }
+            .btn-toggle:hover {
+                background: var(--primary);
+                color: var(--bg-color);
+                box-shadow: 0 0 10px var(--neon-glow);
+            }
         </style>
     </head>
     <body>
         <div class="login-box">
-            <h2 style="text-align: center;">Login</h2>
+            <h2>Login</h2>
             <form method="POST" action="/login">
                 <input type="text" name="username" placeholder="Username" required>
                 <input type="password" name="password" placeholder="Password" required>
-                <button type="submit">Login</button>
+                <button type="submit" class="btn">Login</button>
             </form>
+            <div class="theme-toggle-container">
+                <button type="button" class="btn-toggle" onclick="toggleTheme()">Toggle Theme</button>
+            </div>
         </div>
     </body>
     </html>
@@ -205,30 +335,114 @@ fn escape_html(s: &str) -> String {
 fn html_head(title: &str) -> String {
     format!(r#"
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="theme-color" content="\#0a0a0a">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <title>{}</title>
+        <script>
+            function getTheme() {{ return localStorage.getItem('theme') || 'dark'; }}
+            function setTheme(theme) {{
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+            }}
+            function toggleTheme() {{
+                setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+            }}
+            setTheme(getTheme());
+        </script>
         <style>
-            body {{ font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
-            .container {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-            th, td {{ padding: 12px; border-bottom: 1px solid #eee; text-align: left; }}
-            th {{ background-color: #f4f4f4; }}
-            .btn {{ padding: 6px 12px; text-decoration: none; border-radius: 4px; color: white; border: none; cursor: pointer; display: inline-block; }}
-            .btn-primary {{ background-color: #007bff; }}
-            .btn-danger {{ background-color: #dc3545; }}
-            .btn-enable {{ background-color: #28a745; }}
-            .btn-disable {{ background-color: #dc3545; }}
-            .btn-logout {{ background-color: #6c757d; }}
-            .status-enabled {{ color: #28a745; font-weight: bold; }}
-            .status-disabled {{ color: #dc3545; font-weight: bold; }}
-            .header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }}
-            .nav {{ margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #ddd; }}
-            .nav a {{ margin-right: 15px; text-decoration: none; color: #333; font-weight: bold; }}
-            .nav a:hover {{ color: #007bff; }}
+            :root {{
+                --bg-color: #ffffff;
+                --text-color: #111111;
+                --card-bg: #f9f9f9;
+                --border-color: #cccccc;
+                --input-bg: #ffffff;
+                --input-text: #111111;
+                --primary: #00f0ff;
+                --secondary: #8a2be2;
+                --neon-glow: rgba(0, 240, 255, 0.4);
+                --btn-text: #ffffff;
+                --table-bg: #ffffff;
+                --table-header: #f4f4f4;
+            }}
+            [data-theme="dark"] {{
+                --bg-color: #0a0a0a;
+                --text-color: #e0e0e0;
+                --card-bg: #141414;
+                --border-color: #333333;
+                --input-bg: #1a1a1a;
+                --input-text: #e0e0e0;
+                --neon-glow: rgba(0, 240, 255, 0.7);
+                --table-bg: #111111;
+                --table-header: #1a1a1a;
+            }}
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: var(--bg-color);
+                color: var(--text-color);
+                background-image: linear-gradient(var(--border-color) 1px, transparent 1px), linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+                background-size: 40px 40px;
+                background-position: center center;
+                transition: background-color 0.3s, color 0.3s;
+            }}
+            [data-theme="dark"] body {{
+                background-image: linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+            }}
+            .container {{
+                background: var(--card-bg);
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 0 15px var(--neon-glow);
+                border: 1px solid var(--border-color);
+            }}
+            [data-theme="dark"] .container {{
+                border-image: linear-gradient(45deg, var(--primary), var(--secondary)) 1;
+                border-width: 1px;
+                border-style: solid;
+            }}
+            h1, h2, h3 {{
+                color: var(--primary);
+                text-shadow: 0 0 8px var(--neon-glow);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--table-bg); }}
+            th, td {{ padding: 12px; border-bottom: 1px solid var(--border-color); text-align: left; }}
+            th {{ background-color: var(--table-header); color: var(--primary); text-transform: uppercase; }}
+            .btn {{ padding: 8px 16px; text-decoration: none; border-radius: 4px; color: var(--btn-text); border: none; cursor: pointer; display: inline-block; font-weight: bold; text-transform: uppercase; transition: box-shadow 0.3s, transform 0.1s; background: linear-gradient(90deg, var(--secondary), var(--primary)); }}
+            .btn:hover {{ box-shadow: 0 0 12px var(--neon-glow); }}
+            .btn:active {{ transform: scale(0.98); }}
+            .btn-primary {{ background: linear-gradient(90deg, var(--secondary), var(--primary)); }}
+            .btn-danger {{ background: linear-gradient(90deg, #ff0055, #aa0033); box-shadow: 0 0 8px rgba(255,0,85,0.4); }}
+            .btn-danger:hover {{ box-shadow: 0 0 15px rgba(255,0,85,0.7); }}
+            .btn-enable {{ background: linear-gradient(90deg, #00ffaa, #009966); box-shadow: 0 0 8px rgba(0,255,170,0.4); }}
+            .btn-enable:hover {{ box-shadow: 0 0 15px rgba(0,255,170,0.7); }}
+            .btn-disable {{ background: linear-gradient(90deg, #ff0055, #aa0033); box-shadow: 0 0 8px rgba(255,0,85,0.4); }}
+            .btn-disable:hover {{ box-shadow: 0 0 15px rgba(255,0,85,0.7); }}
+            .btn-logout {{ background: transparent; border: 1px solid var(--border-color); color: var(--text-color); }}
+            .btn-logout:hover {{ background: var(--border-color); box-shadow: none; color: var(--bg-color); }}
+            .btn-toggle {{ background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 8px 16px; cursor: pointer; border-radius: 4px; text-transform: uppercase; font-size: 0.8em; font-weight: bold; transition: all 0.3s; margin-right: 10px; }}
+            .btn-toggle:hover {{ background: var(--primary); color: var(--bg-color); box-shadow: 0 0 10px var(--neon-glow); }}
+            .status-enabled {{ color: #00ffaa; font-weight: bold; text-shadow: 0 0 5px rgba(0,255,170,0.5); }}
+            .status-disabled {{ color: #ff0055; font-weight: bold; text-shadow: 0 0 5px rgba(255,0,85,0.5); }}
+            .header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }}
+            .header-actions {{ display: flex; align-items: center; }}
+            .nav {{ margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }}
+            .nav a {{ margin-right: 15px; text-decoration: none; color: var(--text-color); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: color 0.3s; }}
+            .nav a:hover {{ color: var(--primary); text-shadow: 0 0 8px var(--neon-glow); }}
             .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }}
-            .stat-card {{ background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e9ecef; }}
-            .stat-value {{ font-size: 1.5em; font-weight: bold; color: #007bff; }}
+            .stat-card {{ background: var(--table-header); padding: 15px; border-radius: 6px; border: 1px solid var(--border-color); transition: border-color 0.3s, box-shadow 0.3s; }}
+            .stat-card:hover {{ border-color: var(--primary); box-shadow: 0 0 10px var(--neon-glow); }}
+            .stat-value {{ font-size: 1.5em; font-weight: bold; color: var(--primary); text-shadow: 0 0 5px var(--neon-glow); margin-top: 10px; }}
+            input, select {{ width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--border-color); border-radius: 4px; outline: none; transition: border-color 0.3s, box-shadow 0.3s; }}
+            input:focus, select:focus {{ border-color: var(--primary); box-shadow: 0 0 8px var(--neon-glow); }}
         </style>
     </head>
     <body>
@@ -292,9 +506,12 @@ async fn dashboard(State(state): State<SharedState>, session: Session) -> impl I
     let _ = write!(html, r#"
         <div class="header">
             <h1>AETHERIS 🚀</h1>
-            <form method="POST" action="/logout" style="margin: 0;">
-                <button type="submit" class="btn btn-logout">Logout ({})</button>
-            </form>
+            <div class="header-actions">
+                <button type="button" class="btn-toggle" onclick="toggleTheme()">Toggle Theme</button>
+                <form method="POST" action="/logout" style="margin: 0;">
+                    <button type="submit" class="btn btn-logout">Logout ({})</button>
+                </form>
+            </div>
         </div>
     "#, escaped_username);
 
@@ -404,9 +621,12 @@ async fn users_page(session: Session) -> impl IntoResponse {
     html.push_str(r#"
         <div class="header">
             <h1>User Management 👥</h1>
-            <form method="POST" action="/logout">
-                <button type="submit" class="btn btn-logout">Logout</button>
-            </form>
+            <div class="header-actions">
+                <button type="button" class="btn-toggle" onclick="toggleTheme()">Toggle Theme</button>
+                <form method="POST" action="/logout" style="margin: 0;">
+                    <button type="submit" class="btn btn-logout">Logout</button>
+                </form>
+            </div>
         </div>
         <div class="nav">
             <a href="/">Dashboard</a>
@@ -414,7 +634,7 @@ async fn users_page(session: Session) -> impl IntoResponse {
         </div>
 
         <h3>Add New User</h3>
-        <form method="POST" action="/users/add" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end;">
+        <form method="POST" action="/users/add" style="background: var(--table-header); padding: 15px; border-radius: 6px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; border: 1px solid var(--border-color);">
             <div>
                 <label>Username</label><br>
                 <input type="text" name="username" required style="width: 100%; padding: 8px;">
