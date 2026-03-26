@@ -1,6 +1,6 @@
 users:
   testuser:
     username: testuser
-    password_hash: $2b$12$dIRthYnUpNqmTI1wSriMNOPZUWeXf1bdWi1YnJmFaN81ZroG0XC0u
+    password_hash: $2b$12$vs.let0CgQw2dWNYJcTec.FYfCUpGYN.A5kGvbDhSrcQHkysD9VAK
     role: Observer
     quota_gb: null

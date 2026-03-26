@@ -66,6 +66,10 @@ AETHERIS follows the Ports & Adapters pattern:
     - `LiveAdapter`: Real-world implementation using Docker CLI and Linux system calls.
     - `MockRuntime`: High-fidelity mock used for 100% test coverage in sandboxed or CI environments.
 
+### Core Optimizations
+- **Zero-Allocation Service Registry:** `get_all_services()` returns static references directly from memory rather than creating Boxed trait objects, massively reducing allocation overhead and improving orchestration performance.
+- **Lazy Allocation Authentication:** Password validation methods defer User cloning and heap allocations until after successful credential verification to enhance resilience against failed attempt storms.
+
 ## 🛠 Usage
 
 ### Environment Variables
