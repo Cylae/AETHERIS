@@ -99,7 +99,7 @@ fn test_security_bindings() {
 
 #[test]
 fn test_profile_logic_low() {
-    // Test that Low profile disables SpamAssassin in MailService
+    // Test that Low profile disables SpamAssassin, ClamAV, and Fail2Ban in MailService
     let hw = HardwareInfo {
         profile: HardwareProfile::Low,
         ram_gb: 2,
@@ -118,14 +118,18 @@ fn test_profile_logic_low() {
     let mail = compose.services.get("mailserver").unwrap();
     let envs = mail.environment.as_ref().unwrap();
 
-    // Check for ENABLE_SPAMASSASSIN=0
+    // Check for ENABLE_SPAMASSASSIN=0, ENABLE_CLAMAV=0, ENABLE_FAIL2BAN=0
     let has_disabled_spam = envs.get("ENABLE_SPAMASSASSIN").map(|s| s.as_str()) == Some("0");
     assert!(has_disabled_spam, "Low profile should disable SpamAssassin");
+    let has_disabled_clamav = envs.get("ENABLE_CLAMAV").map(|s| s.as_str()) == Some("0");
+    assert!(has_disabled_clamav, "Low profile should disable ClamAV");
+    let has_disabled_fail2ban = envs.get("ENABLE_FAIL2BAN").map(|s| s.as_str()) == Some("0");
+    assert!(has_disabled_fail2ban, "Low profile should disable Fail2Ban");
 }
 
 #[test]
 fn test_profile_logic_standard() {
-    // Test that Standard profile enables SpamAssassin
+    // Test that Standard profile enables SpamAssassin, ClamAV, and Fail2Ban in MailService
     let hw = HardwareInfo {
         profile: HardwareProfile::Standard,
         ram_gb: 8,
@@ -144,9 +148,13 @@ fn test_profile_logic_standard() {
     let mail = compose.services.get("mailserver").unwrap();
     let envs = mail.environment.as_ref().unwrap();
 
-    // Check for ENABLE_SPAMASSASSIN=1
+    // Check for ENABLE_SPAMASSASSIN=1, ENABLE_CLAMAV=1, ENABLE_FAIL2BAN=1
     let has_enabled_spam = envs.get("ENABLE_SPAMASSASSIN").map(|s| s.as_str()) == Some("1");
     assert!(has_enabled_spam, "Standard profile should enable SpamAssassin");
+    let has_enabled_clamav = envs.get("ENABLE_CLAMAV").map(|s| s.as_str()) == Some("1");
+    assert!(has_enabled_clamav, "Standard profile should enable ClamAV");
+    let has_enabled_fail2ban = envs.get("ENABLE_FAIL2BAN").map(|s| s.as_str()) == Some("1");
+    assert!(has_enabled_fail2ban, "Standard profile should enable Fail2Ban");
 }
 
 #[test]
