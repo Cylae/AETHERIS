@@ -67,40 +67,39 @@ pub trait Service: Send + Sync {
     fn logging(&self) -> LoggingConfig { LoggingConfig::default() }
 }
 
-pub fn get_all_services() -> &'static [Box<dyn Service>] {
-    static SERVICES: std::sync::OnceLock<Vec<Box<dyn Service>>> = std::sync::OnceLock::new();
-    SERVICES.get_or_init(|| vec![
-        Box::new(media::PlexService),
-        Box::new(media::TautulliService),
-        Box::new(media::OverseerrService),
-        Box::new(media::JellyfinService),
-        Box::new(media::JellyseerrService),
-        Box::new(media::AudiobookshelfService),
-        Box::new(arr::SonarrService),
-        Box::new(arr::RadarrService),
-        Box::new(arr::ProwlarrService),
-        Box::new(arr::JackettService),
-        Box::new(arr::BazarrService),
-        Box::new(download::QBittorrentService),
-        Box::new(infra::MariaDBService),
-        Box::new(infra::RedisService),
-        Box::new(infra::NginxProxyService),
-        Box::new(infra::DNSCryptService),
-        Box::new(infra::WireguardService),
-        Box::new(infra::PortainerService),
-        Box::new(infra::NetdataService),
-        Box::new(infra::HomepageService),
-        Box::new(infra::UptimeKumaService),
-        Box::new(apps::VaultwardenService),
-        Box::new(apps::FilebrowserService),
-        Box::new(apps::YourlsService),
-        Box::new(apps::GLPIService),
-        Box::new(apps::GiteaService),
-        Box::new(apps::RoundcubeService),
-        Box::new(apps::NextcloudService),
-        Box::new(apps::MailService),
-        Box::new(apps::SyncthingService),
-    ])
+pub fn get_all_services() -> &'static [&'static dyn Service] {
+    &[
+        &media::PlexService,
+        &media::TautulliService,
+        &media::OverseerrService,
+        &media::JellyfinService,
+        &media::JellyseerrService,
+        &media::AudiobookshelfService,
+        &arr::SonarrService,
+        &arr::RadarrService,
+        &arr::ProwlarrService,
+        &arr::JackettService,
+        &arr::BazarrService,
+        &download::QBittorrentService,
+        &infra::MariaDBService,
+        &infra::RedisService,
+        &infra::NginxProxyService,
+        &infra::DNSCryptService,
+        &infra::WireguardService,
+        &infra::PortainerService,
+        &infra::NetdataService,
+        &infra::HomepageService,
+        &infra::UptimeKumaService,
+        &apps::VaultwardenService,
+        &apps::FilebrowserService,
+        &apps::YourlsService,
+        &apps::GLPIService,
+        &apps::GiteaService,
+        &apps::RoundcubeService,
+        &apps::NextcloudService,
+        &apps::MailService,
+        &apps::SyncthingService,
+    ]
 }
 
 #[cfg(test)]

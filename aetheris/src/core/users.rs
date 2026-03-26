@@ -162,14 +162,13 @@ impl UserManager {
         if let Some(user) = self.users.get(username) {
             let hash = user.password_hash.clone();
             let password = password.to_string();
-            let user_clone = user.clone();
 
             let is_valid = tokio::task::spawn_blocking(move || {
                 verify(&password, &hash).unwrap_or(false)
             }).await.unwrap_or(false);
 
             if is_valid {
-                return Some(user_clone);
+                return Some(user.clone());
             }
         }
         None
