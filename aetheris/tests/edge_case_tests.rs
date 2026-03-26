@@ -153,3 +153,23 @@ async fn test_user_listing() {
     assert_eq!(u2.role, Role::Admin);
     assert_eq!(u2.quota_gb, Some(10));
 }
+
+#[tokio::test]
+async fn test_user_verify_async() {
+    let mut manager = UserManager::default();
+    let runtime = MockRuntime::default();
+    manager.add_user(&runtime, "testuser", "correct_pass", Role::Observer, None).await.unwrap();
+
+    // Verify correct password returns Some(User)
+    let user = manager.verify_async("testuser", "correct_pass").await;
+    assert!(user.is_some());
+    assert_eq!(user.unwrap().username, "testuser");
+
+    // Verify incorrect password returns None
+    let bad_user = manager.verify_async("testuser", "wrong_pass").await;
+    assert!(bad_user.is_none());
+
+    // Verify non-existent user returns None
+    let no_user = manager.verify_async("missinguser", "correct_pass").await;
+    assert!(no_user.is_none());
+}
