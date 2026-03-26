@@ -76,11 +76,20 @@ impl AppState {
     }
 }
 
+fn is_secure_session_enabled() -> bool {
+    std::env::var("AETHERIS_SECURE_SESSIONS")
+        .map(|v| {
+            let v_lower = v.to_lowercase();
+            v_lower != "0" && v_lower != "false"
+        })
+        .unwrap_or(true)
+}
+
 pub async fn start_server(port: u16) -> anyhow::Result<()> {
     // Session setup
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false) // Localhost/LAN, http usually
+        .with_secure(is_secure_session_enabled())
         .with_expiry(Expiry::OnInactivity(Duration::hours(24)));
 
     // Initialize System once
@@ -583,5 +592,47 @@ fn run_cli_toggle(service: &str, enable: bool) {
         }
     } else {
         error!("Failed to determine current executable path.");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn test_secure_sessions_env_serialization() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        // Default
+        env::remove_var("AETHERIS_SECURE_SESSIONS");
+        assert_eq!(is_secure_session_enabled(), true);
+
+        // False values
+        env::set_var("AETHERIS_SECURE_SESSIONS", "0");
+        assert_eq!(is_secure_session_enabled(), false);
+        env::set_var("AETHERIS_SECURE_SESSIONS", "false");
+        assert_eq!(is_secure_session_enabled(), false);
+        env::set_var("AETHERIS_SECURE_SESSIONS", "FALSE");
+        assert_eq!(is_secure_session_enabled(), false);
+        env::set_var("AETHERIS_SECURE_SESSIONS", "fAlSe");
+        assert_eq!(is_secure_session_enabled(), false);
+
+        // True values
+        env::set_var("AETHERIS_SECURE_SESSIONS", "1");
+        assert_eq!(is_secure_session_enabled(), true);
+        env::set_var("AETHERIS_SECURE_SESSIONS", "true");
+        assert_eq!(is_secure_session_enabled(), true);
+        env::set_var("AETHERIS_SECURE_SESSIONS", "TRUE");
+        assert_eq!(is_secure_session_enabled(), true);
+        env::set_var("AETHERIS_SECURE_SESSIONS", "anything");
+        assert_eq!(is_secure_session_enabled(), true);
+        env::set_var("AETHERIS_SECURE_SESSIONS", "");
+        assert_eq!(is_secure_session_enabled(), true);
+
+        // Clean up
+        env::remove_var("AETHERIS_SECURE_SESSIONS");
     }
 }

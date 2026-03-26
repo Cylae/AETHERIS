@@ -76,6 +76,7 @@ AETHERIS follows the Ports & Adapters pattern:
 
 - `AETHERIS_HOME`: Base directory for configuration and data (defaults to current directory).
 - `AETHERIS_CONFIG`: Explicit path to `config.yaml`.
+- `AETHERIS_SECURE_SESSIONS`: Controls whether session cookies are marked as `Secure`. Defaults to `true`. Set to "0", "false", or "FALSE" to disable.
 
 ### CLI Commands
 
