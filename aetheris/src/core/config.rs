@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::io::Write;
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 use anyhow::{Result, Context};
 use log::info;
 use std::sync::OnceLock;
@@ -118,7 +121,14 @@ impl Config {
     pub fn save(&self) -> Result<()> {
         let path = get_config_path();
         let content = serde_yaml_ng::to_string(self)?;
-        fs::write(path, content).context("Failed to write config file")?;
+
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+
+        let mut file = options.open(path).context("Failed to write config file")?;
+        file.write_all(content.as_bytes()).context("Failed to write config file")?;
         Ok(())
     }
 

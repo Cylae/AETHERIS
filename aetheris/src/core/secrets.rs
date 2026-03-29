@@ -1,6 +1,8 @@
 use std::fs::{self, File};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::Path;
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 use serde::{Serialize, Deserialize};
 use anyhow::{Result, Context};
 use log::info;
@@ -80,14 +82,21 @@ impl Secrets {
         if changed {
             info!("Generated new secrets.");
             let content = serde_yaml_ng::to_string(&secrets)?;
-            fs::write(path, content).context("Failed to write secrets file")?;
+
+            let mut options = std::fs::OpenOptions::new();
+            options.write(true).create(true).truncate(true);
+            #[cfg(unix)]
+            options.mode(0o600);
+
+            let mut file = options.open(path).context("Failed to write secrets file")?;
+            file.write_all(content.as_bytes()).context("Failed to write secrets file")?;
         }
 
         Ok(secrets)
     }
 }
 
-fn generate_hex(bytes: usize) -> Result<String> {
+pub(crate) fn generate_hex(bytes: usize) -> Result<String> {
     let mut file = File::open("/dev/urandom").context("Failed to open /dev/urandom")?;
     let mut buffer = vec![0u8; bytes];
     file.read_exact(&mut buffer).context("Failed to read from /dev/urandom")?;

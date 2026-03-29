@@ -5,6 +5,8 @@ use aetheris_core::core::users::{UserManager, Role};
 use aetheris_core::adapters::mock::MockRuntime;
 use aetheris_core::build_compose_structure;
 
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 // ============================================================================
 // UNICODE AND SPECIAL CHARACTER TESTS
 // ============================================================================
@@ -53,6 +55,24 @@ async fn test_extremely_long_password() {
     if result.is_ok() {
         assert!(manager.verify("testuser2", &very_long_password).is_some());
     }
+}
+
+// ============================================================================
+// ENVIRONMENT LOCK EDGE CASES
+// ============================================================================
+
+#[test]
+fn test_environment_variable_lock() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    std::env::set_var("AETHERIS_HOME", "/tmp/aetheris_test_env");
+    std::fs::create_dir_all("/tmp/aetheris_test_env").unwrap();
+
+    // Simulate some logic that depends on AETHERIS_HOME being set safely
+    let secrets = Secrets::load_or_create("secrets.yaml");
+    assert!(secrets.is_ok());
+
+    std::env::remove_var("AETHERIS_HOME");
+    std::fs::remove_dir_all("/tmp/aetheris_test_env").unwrap_or_default();
 }
 
 // ============================================================================

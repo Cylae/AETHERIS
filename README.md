@@ -103,3 +103,5 @@ The test suite automatically utilizes the `MockRuntime` to verify orchestrator l
 
 ---
 **Project AETHERIS** - *The Environment-Agnostic Orchestrator.*
+
+*Note: Updated for latest security & test robustness improvements.*

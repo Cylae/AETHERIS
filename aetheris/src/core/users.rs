@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::io::Write;
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 use anyhow::{Result, Context, anyhow};
 use log::{info, warn};
 use bcrypt::{DEFAULT_COST, hash, verify};
@@ -80,7 +83,14 @@ impl UserManager {
         };
 
         let content = serde_yaml_ng::to_string(self)?;
-        fs::write(target, content).context("Failed to write users.yaml")?;
+
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+
+        let mut file = options.open(target).context("Failed to write users.yaml")?;
+        file.write_all(content.as_bytes()).context("Failed to write users.yaml")?;
         Ok(())
     }
 
