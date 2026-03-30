@@ -87,7 +87,7 @@ impl Secrets {
     }
 }
 
-fn generate_hex(bytes: usize) -> Result<String> {
+pub(crate) fn generate_hex(bytes: usize) -> Result<String> {
     let mut file = File::open("/dev/urandom").context("Failed to open /dev/urandom")?;
     let mut buffer = vec![0u8; bytes];
     file.read_exact(&mut buffer).context("Failed to read from /dev/urandom")?;

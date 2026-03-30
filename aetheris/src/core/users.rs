@@ -57,8 +57,8 @@ impl UserManager {
 
         if manager.users.is_empty() {
             info!("No users found. Creating default 'admin' user.");
-            let pass = "admin";
-            let hash = hash(pass, DEFAULT_COST)?;
+            let pass = crate::core::secrets::generate_hex(12).unwrap_or_else(|_| "admin".to_string());
+            let hash = hash(&pass, DEFAULT_COST)?;
             manager.users.insert("admin".to_string(), User {
                 username: "admin".to_string(),
                 password_hash: hash,
@@ -66,7 +66,7 @@ impl UserManager {
                 quota_gb: None,
             });
             manager.save()?;
-            info!("Default user 'admin' created with password 'admin'. CHANGE THIS IMMEDIATELY!");
+            info!("Default user 'admin' created with password '{}'. CHANGE THIS IMMEDIATELY!", pass);
         }
 
         Ok(manager)

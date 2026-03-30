@@ -69,6 +69,7 @@ AETHERIS follows the Ports & Adapters pattern:
 ### Core Optimizations
 - **Zero-Allocation Service Registry:** `get_all_services()` returns static references directly from memory rather than creating Boxed trait objects, massively reducing allocation overhead and improving orchestration performance.
 - **Lazy Allocation Authentication:** Password validation methods defer User cloning and heap allocations until after successful credential verification to enhance resilience against failed attempt storms.
+- **Secure Default Admin Password:** Generates a secure random 24-character hex password for the initial "admin" user instead of using a hardcoded weak password.
 
 ## 🛠 Usage
 
