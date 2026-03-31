@@ -57,8 +57,8 @@ impl UserManager {
 
         if manager.users.is_empty() {
             info!("No users found. Creating default 'admin' user.");
-            let pass = "admin";
-            let hash = hash(pass, DEFAULT_COST)?;
+            let pass = crate::core::secrets::generate_hex(12)?;
+            let hash = hash(&pass, DEFAULT_COST)?;
             manager.users.insert("admin".to_string(), User {
                 username: "admin".to_string(),
                 password_hash: hash,
@@ -66,7 +66,7 @@ impl UserManager {
                 quota_gb: None,
             });
             manager.save()?;
-            info!("Default user 'admin' created with password 'admin'. CHANGE THIS IMMEDIATELY!");
+            info!("Default user 'admin' created with password '{}'. CHANGE THIS IMMEDIATELY!", pass);
         }
 
         Ok(manager)
@@ -80,7 +80,16 @@ impl UserManager {
         };
 
         let content = serde_yaml_ng::to_string(self)?;
-        fs::write(target, content).context("Failed to write users.yaml")?;
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options.open(target).context("Failed to open users.yaml for writing")?;
+        use std::io::Write;
+        file.write_all(content.as_bytes()).context("Failed to write users.yaml")?;
         Ok(())
     }
 

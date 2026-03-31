@@ -80,14 +80,23 @@ impl Secrets {
         if changed {
             info!("Generated new secrets.");
             let content = serde_yaml_ng::to_string(&secrets)?;
-            fs::write(path, content).context("Failed to write secrets file")?;
+            let mut options = std::fs::OpenOptions::new();
+            options.write(true).create(true).truncate(true);
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                options.mode(0o600);
+            }
+            let mut file = options.open(path).context("Failed to open secrets file for writing")?;
+            use std::io::Write;
+            file.write_all(content.as_bytes()).context("Failed to write secrets file")?;
         }
 
         Ok(secrets)
     }
 }
 
-fn generate_hex(bytes: usize) -> Result<String> {
+pub(crate) fn generate_hex(bytes: usize) -> Result<String> {
     let mut file = File::open("/dev/urandom").context("Failed to open /dev/urandom")?;
     let mut buffer = vec![0u8; bytes];
     file.read_exact(&mut buffer).context("Failed to read from /dev/urandom")?;
