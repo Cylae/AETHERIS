@@ -1,5 +1,3 @@
-version: '3.8'
-
 # ==============================================================================
 # NETWORKS
 # ==============================================================================
@@ -238,7 +236,7 @@ services:
   # 10. APPS: Yourls
   # ----------------------------------------------------------------------------
   yourls:
-    image: yourls/yourls:latest
+    image: yourls:latest
     container_name: aetheris_yourls
     restart: always
     environment:
