@@ -101,5 +101,9 @@ cargo test
 
 The test suite automatically utilizes the `MockRuntime` to verify orchestrator logic and service configurations, including file generation and security settings.
 
+## 📚 Documentation
+
+- [Mail-in-a-Box Integration Analysis](docs/MIAB_INTEGRATION_ANALYSIS.md) - An analysis of potential integration paths for Mail-in-a-Box into the AETHERIS ecosystem.
+
 ---
 **Project AETHERIS** - *The Environment-Agnostic Orchestrator.*
