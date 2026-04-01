@@ -1,11 +1,10 @@
 #!/bin/bash
-# AETHERIS v1.0.5 - Security Fix & Quality Improvement Installer
-# This script applies all Priority 1-3 improvements to an existing installation
-
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="$SCRIPT_DIR/install.log"
+# ==============================================================================
+# AETHERIS INSTALLATION & INITIALIZATION SCRIPT
+# Pure Container-First Architecture (Tabula Rasa)
+# ==============================================================================
 
 # Colors for output
 RED='\033[0;31m'
@@ -14,205 +13,127 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-log() {
-    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $1" | tee -a "$LOG_FILE"
-}
-
-warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1" | tee -a "$LOG_FILE"
-}
-
-info() {
-    echo -e "${BLUE}[INFO]${NC} $1" | tee -a "$LOG_FILE"
-}
+log() { echo -e "${GREEN}[INFO]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+warn() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 
 banner() {
     cat << 'EOF'
-╔══════════════════════════════════════════════════════════════════════════╗
-║                                                                          ║
-║            SERVER MANAGER v1.0.5 - SECURITY FIX INSTALLER               ║
-║                                                                          ║
-║  This script applies critical security fixes and quality improvements   ║
-║                                                                          ║
-╚══════════════════════════════════════════════════════════════════════════╝
+    ___    __________________  ____________  _________
+   /   |  / ____/_  __/ __/ / / / ____/ __ \/  _/ ___/
+  / /| | / __/   / / / /_/ /_/ / __/ / /_/ // / \__ \
+ / ___ |/ /___  / / / __/ __  / /___/ _, _// / ___/ /
+/_/  |_/_____/ /_/ /_/ /_/ /_/_____/_/ |_/___//____/
+
+   Pure Container-First Infrastructure Orchestrator
 EOF
 }
 
-# Display banner
+# ------------------------------------------------------------------------------
+# 1. Pre-flight Checks
+# ------------------------------------------------------------------------------
 banner
-echo ""
 
-# Detect installation method
-if [ -d "/opt/aetheris_source" ]; then
-    REPO_DIR="/opt/aetheris_source"
-    log "Found existing installation at: $REPO_DIR"
-elif [ -d "$HOME/server_script" ]; then
-    REPO_DIR="$HOME/server_script"
-    log "Found repository at: $REPO_DIR"
+if ! command -v docker &> /dev/null; then
+    error "Docker is not installed. Please install Docker first: https://get.docker.com/"
+fi
+
+if ! docker compose version &> /dev/null; then
+    error "Docker Compose (V2) is not installed. Please install it."
+fi
+
+# ------------------------------------------------------------------------------
+# 2. Directory Scaffolding
+# ------------------------------------------------------------------------------
+log "Scaffolding data directories..."
+
+# Define base paths (matches .env.template)
+DATA_DIR="./data"
+MEDIA_DIR="./media"
+
+mkdir -p "${DATA_DIR}/mailserver/mail-data"
+mkdir -p "${DATA_DIR}/mailserver/mail-state"
+mkdir -p "${DATA_DIR}/mailserver/mail-logs"
+mkdir -p "${DATA_DIR}/mailserver/config"
+mkdir -p "${DATA_DIR}/roundcube/db"
+mkdir -p "${DATA_DIR}/roundcube/config"
+mkdir -p "${MEDIA_DIR}"
+
+# Fix permissions for Mailserver to prevent initialization errors
+chmod -R 777 "${DATA_DIR}/mailserver" || true
+
+log "Directories created successfully."
+
+# ------------------------------------------------------------------------------
+# 3. Environment Variable Generation
+# ------------------------------------------------------------------------------
+log "Configuring environment variables..."
+
+if [ -f ".env" ]; then
+    warn ".env file already exists. Skipping secret generation to preserve existing configuration."
 else
-    error "Could not find existing AETHERIS installation."
-    echo ""
-    echo "Expected locations:"
-    echo "  - /opt/aetheris_source"
-    echo "  - $HOME/server_script"
-    echo ""
-    echo "Would you like to clone the repository now? (y/n)"
-    read -r response
-    if [[ "$response" =~ ^[Yy]$ ]]; then
-        REPO_DIR="$HOME/server_script"
-        log "Cloning repository..."
-        git clone -b server-setup-script https://github.com/Cylae/server_script.git "$REPO_DIR"
-        log "✓ Repository cloned"
-    else
-        error "Installation cancelled. Please clone the repository first."
-        exit 1
-    fi
+    log "Generating secure .env file..."
+    cp .env.template .env
+
+    # Generate cryptographically secure random passwords
+    MYSQL_ROOT_PASS=$(openssl rand -hex 24)
+    NPM_DB_PASS=$(openssl rand -hex 24)
+    NEXTCLOUD_DB_PASS=$(openssl rand -hex 24)
+    GITEA_DB_PASS=$(openssl rand -hex 24)
+    YOURLS_DB_PASS=$(openssl rand -hex 24)
+
+    REDIS_PASS=$(openssl rand -hex 24)
+    ADMIN_TOKEN=$(openssl rand -base64 48 | tr -d '\n')
+    NEXTCLOUD_ADMIN_PASS=$(openssl rand -hex 16)
+    YOURLS_ADMIN_PASS=$(openssl rand -hex 16)
+
+    # Replace placeholders in .env
+    sed -i "s/MYSQL_ROOT_PASSWORD=generate_secure_password_here/MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASS}/" .env
+    sed -i "s/NPM_DB_PASSWORD=generate_secure_password_here/NPM_DB_PASSWORD=${NPM_DB_PASS}/" .env
+    sed -i "s/NEXTCLOUD_DB_PASSWORD=generate_secure_password_here/NEXTCLOUD_DB_PASSWORD=${NEXTCLOUD_DB_PASS}/" .env
+    sed -i "s/GITEA_DB_PASSWORD=generate_secure_password_here/GITEA_DB_PASSWORD=${GITEA_DB_PASS}/" .env
+    sed -i "s/YOURLS_DB_PASSWORD=generate_secure_password_here/YOURLS_DB_PASSWORD=${YOURLS_DB_PASS}/" .env
+
+    sed -i "s/REDIS_PASSWORD=generate_secure_password_here/REDIS_PASSWORD=${REDIS_PASS}/" .env
+    sed -i "s|ADMIN_TOKEN=generate_secure_token_here|ADMIN_TOKEN=${ADMIN_TOKEN}|" .env
+    sed -i "s/NEXTCLOUD_ADMIN_PASSWORD=generate_secure_password_here/NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASS}/" .env
+    sed -i "s/YOURLS_ADMIN_PASSWORD=generate_secure_password_here/YOURLS_ADMIN_PASSWORD=${YOURLS_ADMIN_PASS}/" .env
+
+    # Create the init-dbs.sql file from template
+    log "Generating database initialization script..."
+    sed -e "s/\${NPM_DB_PASSWORD}/${NPM_DB_PASS}/g" \
+        -e "s/\${NEXTCLOUD_DB_PASSWORD}/${NEXTCLOUD_DB_PASS}/g" \
+        -e "s/\${GITEA_DB_PASSWORD}/${GITEA_DB_PASS}/g" \
+        -e "s/\${YOURLS_DB_PASSWORD}/${YOURLS_DB_PASS}/g" \
+        init-dbs.sql.template > ./data/init-dbs.sql
+
+    # Set Host UID/GID dynamically
+    PUID=$(id -u)
+    PGID=$(id -g)
+    sed -i "s/PUID=1000/PUID=${PUID}/" .env
+    sed -i "s/PGID=1000/PGID=${PGID}/" .env
+
+    log "Secure .env file generated."
+    warn "Please review the .env file to configure your DOMAIN_NAME and TZ (Timezone) before proceeding."
 fi
 
-cd "$REPO_DIR"
+# ------------------------------------------------------------------------------
+# 4. Container Deployment
+# ------------------------------------------------------------------------------
+echo -e "\n${BLUE}Ready to deploy AETHERIS stack.${NC}"
+read -p "Do you want to start the containers now? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    log "Pulling latest Docker images..."
+    docker compose pull
 
-# Backup existing installation
-log "Creating backup..."
-BACKUP_DIR="${REPO_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
-cp -r "$REPO_DIR" "$BACKUP_DIR"
-log "✓ Backup created at: $BACKUP_DIR"
+    log "Starting AETHERIS infrastructure..."
+    docker compose up -d --remove-orphans
 
-# Apply patches
-log "Applying security patches..."
-
-# 1. Update Cargo.toml
-if [ -f "aetheris/Cargo.toml" ]; then
-    log "Updating Cargo.toml with security dependency..."
-    
-    if grep -q "rpassword" aetheris/Cargo.toml; then
-        warning "rpassword dependency already present"
-    else
-        # Add rpassword dependency after time dependency
-        sed -i '/^time = "0.3"/a rpassword = "7.3"  # SECURITY FIX: Secure password input' aetheris/Cargo.toml
-        log "✓ Added rpassword dependency"
-    fi
-    
-    # Update version
-    sed -i 's/version = "1.0.4"/version = "1.0.5"/' aetheris/Cargo.toml
-    log "✓ Updated version to 1.0.5"
+    log "Deployment complete! Check container status with: docker compose ps"
+    echo -e "\n${GREEN}Access your services:${NC}"
+    echo -e " - Nginx Proxy Manager: http://localhost:81 (Default login: admin@example.com / changeme)"
+    echo -e " - Map your domains in Nginx Proxy Manager to access Roundcube, Portainer, etc."
 else
-    error "Cargo.toml not found!"
-    exit 1
+    log "Deployment skipped. Run 'docker compose up -d' when you are ready."
 fi
-
-# 2. Apply CLI security patch
-if [ -f "aetheris/src/interface/cli.rs" ]; then
-    log "Applying security fix to CLI..."
-    
-    # Check if already patched
-    if grep -q "rpassword::read_password" aetheris/src/interface/cli.rs; then
-        warning "Security fix already applied to CLI"
-    else
-        # Create patched version
-        info "Applying password input security fix..."
-        
-        # Add import
-        sed -i '/^use std::io::{self, Write};/a use rpassword::read_password;' aetheris/src/interface/cli.rs
-        
-        log "✓ Security fix applied to CLI"
-        warning "MANUAL STEP REQUIRED: Review aetheris/src/interface/cli.rs"
-        warning "Replace password input sections with read_password_securely() function"
-        warning "See: $SCRIPT_DIR/patches/001-security-password-input.patch"
-    fi
-else
-    error "CLI source file not found!"
-    exit 1
-fi
-
-# 3. Add new test file
-if [ ! -f "aetheris/tests/edge_case_tests.rs" ]; then
-    log "Adding comprehensive edge case tests..."
-    if [ -f "$SCRIPT_DIR/tests/edge_case_tests.rs" ]; then
-        cp "$SCRIPT_DIR/tests/edge_case_tests.rs" aetheris/tests/
-        log "✓ Added edge_case_tests.rs"
-    else
-        warning "edge_case_tests.rs not found in patch bundle"
-    fi
-else
-    warning "edge_case_tests.rs already exists"
-fi
-
-# 4. Update documentation
-log "Updating documentation..."
-if [ -f "$SCRIPT_DIR/README.md" ]; then
-    cp "$SCRIPT_DIR/README.md" README.md
-    log "✓ Updated README.md"
-fi
-
-if [ -d "$SCRIPT_DIR/docs" ]; then
-    cp -r "$SCRIPT_DIR/docs/"* docs/ 2>/dev/null || mkdir -p docs && cp -r "$SCRIPT_DIR/docs/"* docs/
-    log "✓ Updated documentation files"
-fi
-
-# 5. Update dependencies
-log "Updating Rust dependencies..."
-cd aetheris
-cargo update 2>&1 | tee -a "$LOG_FILE"
-log "✓ Dependencies updated"
-
-# 6. Run tests
-log "Running test suite..."
-if cargo test --release --verbose 2>&1 | tee -a "$LOG_FILE"; then
-    log "✓ All tests passed"
-else
-    warning "Some tests failed. Review $LOG_FILE for details."
-fi
-
-# 7. Build release version
-log "Building optimized release version..."
-if cargo build --release 2>&1 | tee -a "$LOG_FILE"; then
-    log "✓ Release build successful"
-    BINARY_PATH="$(pwd)/target/release/aetheris"
-    log "Binary location: $BINARY_PATH"
-else
-    error "Build failed! Check $LOG_FILE for details."
-    exit 1
-fi
-
-# Summary
-echo ""
-log "╔══════════════════════════════════════════════════════════════════════════╗"
-log "║                     INSTALLATION COMPLETE                                ║"
-log "╚══════════════════════════════════════════════════════════════════════════╝"
-echo ""
-log "AETHERIS v1.0.5 has been installed with the following improvements:"
-echo ""
-echo "  ✅ Critical security fix: Secure password input"
-echo "  ✅ Version updated: 1.0.4 → 1.0.5"
-echo "  ✅ Dependencies updated (rpassword = 7.3)"
-echo "  ✅ Documentation updated to production standards"
-echo "  ✅ Edge case tests added (+20 tests)"
-echo ""
-log "Backup location: $BACKUP_DIR"
-log "Binary location: $BINARY_PATH"
-log "Log file: $LOG_FILE"
-echo ""
-warning "IMPORTANT MANUAL STEPS:"
-echo ""
-echo "1. Review and apply: patches/001-security-password-input.patch"
-echo "   This contains the full CLI security fix implementation"
-echo ""
-echo "2. Test password input (should NOT show characters):"
-echo "   sudo $BINARY_PATH user add testuser --role Observer"
-echo ""
-echo "3. Review documentation:"
-echo "   - docs/PRODUCTION_CHECKLIST.md"
-echo "   - docs/TEST_ANALYSIS.md"
-echo "   - README.md"
-echo ""
-echo "4. Change default admin password:"
-echo "   sudo $BINARY_PATH user passwd admin"
-echo ""
-log "For detailed patch application, see: $SCRIPT_DIR/patches/"
-log "For implementation reference, see: $SCRIPT_DIR/reference/"
-echo ""
-log "Installation script completed successfully!"
