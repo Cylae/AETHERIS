@@ -1,0 +1,12 @@
+# AETHERIS ignored files
+
+# Generated secrets and environment configuration
+.env
+
+# Persistent state directories
+data/
+media/
+
+# Logs
+*.log
+install.log
