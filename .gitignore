@@ -10,3 +10,4 @@ media/
 # Logs
 *.log
 install.log
+dashboard/node_modules

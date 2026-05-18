@@ -57,10 +57,33 @@ mkdir -p "${DATA_DIR}/mailserver/mail-logs"
 mkdir -p "${DATA_DIR}/mailserver/config"
 mkdir -p "${DATA_DIR}/roundcube/db"
 mkdir -p "${DATA_DIR}/roundcube/config"
+mkdir -p "${DATA_DIR}/prometheus/data"
+mkdir -p "${DATA_DIR}/grafana"
 mkdir -p "${MEDIA_DIR}"
+
+# Write basic Prometheus config
+cat << 'EOF' > "${DATA_DIR}/prometheus/prometheus.yml"
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node_exporter:9100']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+EOF
 
 # Fix permissions for Mailserver to prevent initialization errors
 chmod -R 777 "${DATA_DIR}/mailserver" || true
+# Fix permissions for Grafana (runs as 472:0 by default)
+chmod -R 777 "${DATA_DIR}/grafana" || true
 
 log "Directories created successfully."
 
@@ -86,6 +109,7 @@ else
     ADMIN_TOKEN=$(openssl rand -base64 48 | tr -d '\n')
     NEXTCLOUD_ADMIN_PASS=$(openssl rand -hex 16)
     YOURLS_ADMIN_PASS=$(openssl rand -hex 16)
+    GRAFANA_ADMIN_PASS=$(openssl rand -hex 16)
 
     # Replace placeholders in .env
     sed -i "s/MYSQL_ROOT_PASSWORD=generate_secure_password_here/MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASS}/" .env
@@ -98,6 +122,7 @@ else
     sed -i "s|ADMIN_TOKEN=generate_secure_token_here|ADMIN_TOKEN=${ADMIN_TOKEN}|" .env
     sed -i "s/NEXTCLOUD_ADMIN_PASSWORD=generate_secure_password_here/NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASS}/" .env
     sed -i "s/YOURLS_ADMIN_PASSWORD=generate_secure_password_here/YOURLS_ADMIN_PASSWORD=${YOURLS_ADMIN_PASS}/" .env
+    sed -i "s/GRAFANA_ADMIN_PASSWORD=generate_secure_password_here/GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASS}/" .env
 
     # Create the init-dbs.sql file from template
     log "Generating database initialization script..."
