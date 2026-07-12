@@ -189,7 +189,6 @@ fn test_sql_injection_in_secrets() {
 #[tokio::test]
 async fn test_concurrent_config_updates() {
     use tokio::task::JoinSet;
-    use std::sync::Arc;
     
     let mut tasks = JoinSet::new();
     
