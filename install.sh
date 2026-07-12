@@ -74,6 +74,7 @@ if [ -f ".env" ]; then
 else
     log "Generating secure .env file..."
     cp .env.template .env
+    chmod 600 .env
 
     # Generate cryptographically secure random passwords
     MYSQL_ROOT_PASS=$(openssl rand -hex 24)
