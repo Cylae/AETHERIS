@@ -176,7 +176,7 @@ fn test_sql_injection_in_secrets() {
     };
     
     // Build compose structure - should properly escape
-    let compose = build_compose_structure(&hw, &secrets, &Config::default()).unwrap();
+    let _compose = build_compose_structure(&hw, &secrets, &Config::default()).unwrap();
     
     // Verify MariaDB init script escapes properly
     // (This would require inspecting generated init.sql)
