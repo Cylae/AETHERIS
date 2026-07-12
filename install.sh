@@ -87,17 +87,24 @@ else
     NEXTCLOUD_ADMIN_PASS=$(openssl rand -hex 16)
     YOURLS_ADMIN_PASS=$(openssl rand -hex 16)
 
-    # Replace placeholders in .env
-    sed -i "s/MYSQL_ROOT_PASSWORD=generate_secure_password_here/MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASS}/" .env
-    sed -i "s/NPM_DB_PASSWORD=generate_secure_password_here/NPM_DB_PASSWORD=${NPM_DB_PASS}/" .env
-    sed -i "s/NEXTCLOUD_DB_PASSWORD=generate_secure_password_here/NEXTCLOUD_DB_PASSWORD=${NEXTCLOUD_DB_PASS}/" .env
-    sed -i "s/GITEA_DB_PASSWORD=generate_secure_password_here/GITEA_DB_PASSWORD=${GITEA_DB_PASS}/" .env
-    sed -i "s/YOURLS_DB_PASSWORD=generate_secure_password_here/YOURLS_DB_PASSWORD=${YOURLS_DB_PASS}/" .env
+    # Set Host UID/GID dynamically
+    PUID=$(id -u)
+    PGID=$(id -g)
 
-    sed -i "s/REDIS_PASSWORD=generate_secure_password_here/REDIS_PASSWORD=${REDIS_PASS}/" .env
-    sed -i "s|ADMIN_TOKEN=generate_secure_token_here|ADMIN_TOKEN=${ADMIN_TOKEN}|" .env
-    sed -i "s/NEXTCLOUD_ADMIN_PASSWORD=generate_secure_password_here/NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASS}/" .env
-    sed -i "s/YOURLS_ADMIN_PASSWORD=generate_secure_password_here/YOURLS_ADMIN_PASSWORD=${YOURLS_ADMIN_PASS}/" .env
+    # Replace placeholders in .env
+    sed -i \
+        -e "s/MYSQL_ROOT_PASSWORD=generate_secure_password_here/MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASS}/" \
+        -e "s/NPM_DB_PASSWORD=generate_secure_password_here/NPM_DB_PASSWORD=${NPM_DB_PASS}/" \
+        -e "s/NEXTCLOUD_DB_PASSWORD=generate_secure_password_here/NEXTCLOUD_DB_PASSWORD=${NEXTCLOUD_DB_PASS}/" \
+        -e "s/GITEA_DB_PASSWORD=generate_secure_password_here/GITEA_DB_PASSWORD=${GITEA_DB_PASS}/" \
+        -e "s/YOURLS_DB_PASSWORD=generate_secure_password_here/YOURLS_DB_PASSWORD=${YOURLS_DB_PASS}/" \
+        -e "s/REDIS_PASSWORD=generate_secure_password_here/REDIS_PASSWORD=${REDIS_PASS}/" \
+        -e "s|ADMIN_TOKEN=generate_secure_token_here|ADMIN_TOKEN=${ADMIN_TOKEN}|" \
+        -e "s/NEXTCLOUD_ADMIN_PASSWORD=generate_secure_password_here/NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASS}/" \
+        -e "s/YOURLS_ADMIN_PASSWORD=generate_secure_password_here/YOURLS_ADMIN_PASSWORD=${YOURLS_ADMIN_PASS}/" \
+        -e "s/PUID=1000/PUID=${PUID}/" \
+        -e "s/PGID=1000/PGID=${PGID}/" \
+        .env
 
     # Create the init-dbs.sql file from template
     log "Generating database initialization script..."
@@ -106,12 +113,6 @@ else
         -e "s/\${GITEA_DB_PASSWORD}/${GITEA_DB_PASS}/g" \
         -e "s/\${YOURLS_DB_PASSWORD}/${YOURLS_DB_PASS}/g" \
         init-dbs.sql.template > ./data/init-dbs.sql
-
-    # Set Host UID/GID dynamically
-    PUID=$(id -u)
-    PGID=$(id -g)
-    sed -i "s/PUID=1000/PUID=${PUID}/" .env
-    sed -i "s/PGID=1000/PGID=${PGID}/" .env
 
     log "Secure .env file generated."
     warn "Please review the .env file to configure your DOMAIN_NAME and TZ (Timezone) before proceeding."
