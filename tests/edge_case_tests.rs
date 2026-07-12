@@ -336,11 +336,39 @@ fn test_docker_pull_network_failure() {
     // Verify graceful error handling
 }
 
-#[ignore]
 #[test]
 fn test_partial_service_deployment() {
-    // Some services succeed, some fail
+    let hw = HardwareInfo {
+        profile: HardwareProfile::Standard,
+        ram_gb: 8,
+        cpu_cores: 4,
+        has_nvidia: false,
+        has_intel_quicksync: false,
+        disk_gb: 512,
+        swap_gb: 2,
+        user_id: "1000".to_string(),
+        group_id: "1000".to_string(),
+    };
+
+    let mut config = Config::default();
+
+    // Simulate some services being disabled due to failure or user choice
+    config.disable_service("nextcloud");
+    config.disable_service("plex");
+
+    let secrets = Secrets::default();
+    let compose = build_compose_structure(&hw, &secrets, &config).unwrap();
+
+    // Verify core services are still present
+    assert!(compose.services.contains_key("mariadb"), "Core service mariadb should exist");
+    assert!(compose.services.contains_key("npm"), "Core service npm should exist");
+
+    // Verify disabled services are absent
+    assert!(!compose.services.contains_key("nextcloud"), "Disabled service nextcloud should not exist");
+    assert!(!compose.services.contains_key("plex"), "Disabled service plex should not exist");
+
     // Verify system state is consistent
+    assert!(compose.networks.contains_key("aetheris_net"));
 }
 
 // ============================================================================
