@@ -63,15 +63,17 @@ fn test_extremely_long_password() {
 
 #[test]
 fn test_config_malformed_yaml() {
-    use std::fs;
-    use std::path::Path;
+    let config_content = "disabled_services: [plex, - invalid yaml";
     
-    // Create malformed config
-    let test_config_path = "/tmp/test_config_malformed.yaml";
-    fs::write(test_config_path, "disabled_services: [plex, - invalid yaml").ok();
+    // Attempting to parse malformed YAML should result in an error
+    let parse_result: Result<Config, _> = serde_yaml_ng::from_str(config_content);
+    assert!(parse_result.is_err(), "Malformed YAML should fail to parse");
     
-    // Should return default config on parse error
-    // (This test would need config loading from custom path)
+    // When config loading fails in the application, it uses unwrap_or_default()
+    let config = parse_result.unwrap_or_default();
+
+    // Verify default config state is returned
+    assert!(config.disabled_services.is_empty(), "Malformed YAML should result in default Config");
 }
 
 #[test]

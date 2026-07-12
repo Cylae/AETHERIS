@@ -10,3 +10,8 @@ media/
 # Logs
 *.log
 install.log
+
+
+# Added by cargo
+
+/target
