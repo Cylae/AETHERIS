@@ -210,7 +210,10 @@ async fn test_concurrent_config_updates() {
     while let Some(_) = tasks.join_next().await {}
     
     // Final config should be consistent (not corrupted)
-    let final_config = Config::load().unwrap();
+    assert!(
+        Config::load().is_ok(),
+        "Config file should not be corrupted after concurrent updates"
+    );
     // Should be either enabled or disabled, not in inconsistent state
 }
 
