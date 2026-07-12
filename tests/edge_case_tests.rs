@@ -147,9 +147,16 @@ fn test_hardware_profile_swap_edge_cases() {
 
 #[test]
 fn test_quota_boundary_values() {
+    let mut manager = UserManager::default();
+
     // Test 0 quota (unlimited)
+    assert!(manager.add_user("user_zero", "password", Role::Observer, Some(0)).is_ok());
+
     // Test MAX quota
+    assert!(manager.add_user("user_max", "password", Role::Observer, Some(i64::MAX)).is_ok());
+
     // Test negative quota (should fail)
+    assert!(manager.add_user("user_neg", "password", Role::Observer, Some(-1)).is_err());
 }
 
 // ============================================================================
