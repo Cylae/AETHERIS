@@ -51,13 +51,14 @@ log "Scaffolding data directories..."
 DATA_DIR="./data"
 MEDIA_DIR="./media"
 
-mkdir -p "${DATA_DIR}/mailserver/mail-data"
-mkdir -p "${DATA_DIR}/mailserver/mail-state"
-mkdir -p "${DATA_DIR}/mailserver/mail-logs"
-mkdir -p "${DATA_DIR}/mailserver/config"
-mkdir -p "${DATA_DIR}/roundcube/db"
-mkdir -p "${DATA_DIR}/roundcube/config"
-mkdir -p "${MEDIA_DIR}"
+mkdir -p \
+    "${DATA_DIR}/mailserver/mail-data" \
+    "${DATA_DIR}/mailserver/mail-state" \
+    "${DATA_DIR}/mailserver/mail-logs" \
+    "${DATA_DIR}/mailserver/config" \
+    "${DATA_DIR}/roundcube/db" \
+    "${DATA_DIR}/roundcube/config" \
+    "${MEDIA_DIR}"
 
 # Fix permissions for Mailserver to prevent initialization errors
 chmod -R 777 "${DATA_DIR}/mailserver" || true
