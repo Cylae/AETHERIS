@@ -84,8 +84,16 @@ fn test_config_empty_file() {
 
 #[test]
 fn test_config_missing_file() {
-    // Attempting to load non-existent config should return default
-    // (Verified in config.rs implementation)
+    // Ensure that loading a missing config natively returns a successful
+    // Result containing the default configuration, rather than bubbling up an error.
+    let config_result = Config::load();
+
+    // The implementation itself must return Ok with default config when file is missing
+    assert!(config_result.is_ok(), "Config::load() should return Ok(default) when file is missing, not an Err");
+
+    let config = config_result.unwrap();
+    // Verify it acts as a default configuration by checking disabled_services is empty
+    assert!(config.disabled_services.is_empty());
 }
 
 // ============================================================================
