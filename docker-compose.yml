@@ -4,11 +4,14 @@
 # We define isolated bridge networks.
 # - aetheris_frontend: Used by services directly accessible to the web (proxied).
 # - aetheris_backend: Used for internal databases, caching, and secure services.
+# - aetheris_socket: Isolated internal network for docker-socket-proxy.
 networks:
   aetheris_frontend:
     driver: bridge
   aetheris_backend:
     driver: bridge
+  aetheris_socket:
+    internal: true
 
 # ==============================================================================
 # VOLUMES
@@ -93,16 +96,43 @@ services:
   # ----------------------------------------------------------------------------
   # 4. ORCHESTRATION / MANAGEMENT: Portainer
   # ----------------------------------------------------------------------------
+  # Secure Docker Socket Proxy
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: aetheris_dockerproxy
+    restart: always
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - NETWORKS=1
+      - VOLUMES=1
+      - POST=1
+      - INFO=1
+      - SYSTEM=1
+      - EXEC=1
+      - SECRETS=1
+      - SERVICES=1
+      - TASKS=1
+      - NODES=1
+      - SWARM=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - aetheris_socket
+
   # Web-based management UI for Docker environments.
   portainer:
     image: portainer/portainer-ce:latest
     container_name: aetheris_portainer
     restart: always
+    command: -H tcp://dockerproxy:2375
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - portainer_data:/data
     networks:
       - aetheris_frontend
+      - aetheris_socket
+    depends_on:
+      - dockerproxy
     # Note: Access via NPM reverse proxy mapping Portainer's internal port (9000).
 
   # ----------------------------------------------------------------------------
