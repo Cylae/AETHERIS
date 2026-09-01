@@ -60,7 +60,7 @@ mkdir -p "${DATA_DIR}/roundcube/config"
 mkdir -p "${MEDIA_DIR}"
 
 # Fix permissions for Mailserver to prevent initialization errors
-chmod -R 777 "${DATA_DIR}/mailserver" || true
+chmod -R 750 "${DATA_DIR}/mailserver" || true
 
 log "Directories created successfully."
 
