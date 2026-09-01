@@ -33,7 +33,13 @@ if [ ! -f ./data/init-dbs.sql ]; then
     echo "  ✗ Error: init-dbs.sql was not generated in ./data/."
     return 1 2>/dev/null || exit 1
 fi
-echo "  ✓ install.sh successfully scaffolded .env and init-dbs.sql."
+
+PERMS=$(stat -c "%a" ./data/mailserver)
+if [ "$PERMS" != "750" ]; then
+    echo "  ✗ Error: data/mailserver permissions are $PERMS, expected 750."
+    return 1 2>/dev/null || exit 1
+fi
+echo "  ✓ install.sh successfully scaffolded .env, init-dbs.sql, and set secure permissions (750)."
 
 # 3. Test Docker Compose configuration validity
 echo "[3/4] Validating Docker Compose schema and env resolution..."
