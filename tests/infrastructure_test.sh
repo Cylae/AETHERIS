@@ -1,58 +1,63 @@
 #!/bin/bash
-set -euo pipefail
+# ==============================================================================
+# AETHERIS INFRASTRUCTURE VALIDATION SUITE
+# Automated end-to-end sanity check for scaffolded files, permissions,
+# secret generation, SQL privilege compliance, and Compose syntax.
+# ==============================================================================
+set -e
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-echo "=== Running Infrastructure Tests ==="
+echo "=== Running AETHERIS Infrastructure Test Suite ==="
 
-# 1. Shell script syntax check
-echo "[1/4] Validating shell script syntax..."
-bash -n install.sh
-echo "  ✓ install.sh syntax valid."
+# Clean test environment
+rm -rf ./data ./media .env
 
-# 2. Test install.sh non-interactive setup
-echo "[2/4] Testing non-interactive installation setup..."
-TEST_DIR=$(mktemp -d /tmp/aetheris_test_XXXXXX)
-cleanup() {
-    rm -rf "$TEST_DIR"
-}
-trap cleanup EXIT
+# Run installation non-interactively
+echo "n" | ./install.sh
 
-cp install.sh .env.template init-dbs.sql.template "$TEST_DIR/"
-cd "$TEST_DIR"
+# 1. Verify directory scaffolding and permissions
+echo "Checking directory scaffolding and permissions..."
+test -d ./data/mailserver/mail-data
+test -d ./data/mailserver/mail-state
+test -d ./data/mailserver/mail-logs
+test -d ./data/mailserver/config
+test -d ./data/roundcube/db
+test -d ./data/roundcube/config
+test -d ./media
 
-echo 'n' | ./install.sh > /dev/null
-
-if [ ! -f .env ]; then
-    echo "  ✗ Error: .env file was not generated."
-    return 1 2>/dev/null || exit 1
+MAIL_PERM=$(stat -c "%a" ./data/mailserver)
+if [ "$MAIL_PERM" != "750" ]; then
+    echo "ERROR: Mailserver permissions are $MAIL_PERM (expected 750)"
+    false
 fi
 
-if [ ! -f ./data/init-dbs.sql ]; then
-    echo "  ✗ Error: init-dbs.sql was not generated in ./data/."
-    return 1 2>/dev/null || exit 1
+# 2. Verify .env file creation & random password generation
+echo "Checking .env file generation..."
+test -f .env
+
+if grep -F -q "generate_secure_password_here" .env; then
+    echo "ERROR: Default password placeholders still found in .env"
+    false
 fi
 
-PERMS=$(stat -c "%a" ./data/mailserver)
-if [ "$PERMS" != "750" ]; then
-    echo "  ✗ Error: data/mailserver permissions are $PERMS, expected 750."
-    return 1 2>/dev/null || exit 1
-fi
-echo "  ✓ install.sh successfully scaffolded .env, init-dbs.sql, and set secure permissions (750)."
+# 3. Verify init-dbs.sql generation and permissions
+echo "Checking database initialization script..."
+test -f ./data/init-dbs.sql
 
-# 3. Test Docker Compose configuration validity
-echo "[3/4] Validating Docker Compose schema and env resolution..."
-cp "$PROJECT_ROOT/docker-compose.yml" "$TEST_DIR/"
+if grep -F -q '${' ./data/init-dbs.sql; then
+    echo "ERROR: Unsubstituted template variables in init-dbs.sql"
+    false
+fi
+
+if grep -F -q "ALL PRIVILEGES" ./data/init-dbs.sql; then
+    echo "ERROR: Found ALL PRIVILEGES in init-dbs.sql (least privilege violation)"
+    false
+fi
+
+# 4. Validate Docker Compose configuration with generated .env
+echo "Validating Docker Compose configuration..."
 docker compose config > /dev/null
-echo "  ✓ docker-compose.yml is structurally valid with generated .env."
 
-# 4. Verify init-dbs.sql password substitution
-echo "[4/4] Verifying database credentials substitution..."
-if grep -q '\${NPM_DB_PASSWORD}' ./data/init-dbs.sql; then
-    echo "  ✗ Error: init-dbs.sql contains unreplaced placeholders."
-    return 1 2>/dev/null || exit 1
-fi
-echo "  ✓ Password substitutions succeeded."
-
-echo "=== All Infrastructure Tests Passed Successfully ==="
+echo "=== All Infrastructure Tests Passed Successfully! ==="

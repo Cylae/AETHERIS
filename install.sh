@@ -42,6 +42,10 @@ if ! docker compose version &> /dev/null; then
     error "Docker Compose (V2) is not installed. Please install it."
 fi
 
+if ! command -v openssl &> /dev/null; then
+    error "OpenSSL is not installed. Please install OpenSSL."
+fi
+
 # ------------------------------------------------------------------------------
 # 2. Directory Scaffolding
 # ------------------------------------------------------------------------------
@@ -59,7 +63,8 @@ mkdir -p "${DATA_DIR}/roundcube/db"
 mkdir -p "${DATA_DIR}/roundcube/config"
 mkdir -p "${MEDIA_DIR}"
 
-# Secure permissions for Mailserver data directories
+# Enforce secure directory access permissions (750) for mail server storage
+# Prevents unauthorized local host users from inspecting mail data/logs while ensuring proper container ownership
 chmod -R 750 "${DATA_DIR}/mailserver" || true
 
 log "Directories created successfully."
