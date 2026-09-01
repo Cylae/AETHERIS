@@ -59,8 +59,9 @@ mkdir -p "${DATA_DIR}/roundcube/db"
 mkdir -p "${DATA_DIR}/roundcube/config"
 mkdir -p "${MEDIA_DIR}"
 
-# Fix permissions for Mailserver to prevent initialization errors
-chmod -R 777 "${DATA_DIR}/mailserver" || true
+# Enforce secure directory access permissions (750) for mail server storage
+# Prevents unauthorized local host users from inspecting mail data/logs while ensuring proper container ownership
+chmod -R 750 "${DATA_DIR}/mailserver" || true
 
 log "Directories created successfully."
 

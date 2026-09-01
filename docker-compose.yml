@@ -1,10 +1,10 @@
 # ==============================================================================
-# NETWORKS
+# NETWORKS & ISOLATION BOUNDARIES
 # ==============================================================================
-# We define isolated bridge networks.
-# - aetheris_frontend: Used by services directly accessible to the web (proxied).
-# - aetheris_backend: Used for internal databases, caching, and secure services.
-# - aetheris_socket: Isolated internal network for docker-socket-proxy.
+# We define strictly isolated bridge networks:
+# - aetheris_frontend: Inter-container network for services accessible via NPM ingress.
+# - aetheris_backend: Internal backend network for SQL, Redis cache, and mail storage traffic.
+# - aetheris_socket: Internal, unroutable network dedicated strictly to Docker Socket Proxy API.
 networks:
   aetheris_frontend:
     driver: bridge
