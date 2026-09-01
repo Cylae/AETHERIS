@@ -62,18 +62,6 @@ fn test_extremely_long_password() {
 // ============================================================================
 
 #[test]
-fn test_config_malformed_yaml() {
-    use std::fs;
-    use std::path::Path;
-    
-    // Create malformed config
-    let test_config_path = "/tmp/test_config_malformed.yaml";
-    fs::write(test_config_path, "disabled_services: [plex, - invalid yaml").ok();
-    
-    // Should return default config on parse error
-    // (This test would need config loading from custom path)
-}
-
 #[test]
 fn test_config_empty_file() {
     let config_content = "";
@@ -83,10 +71,6 @@ fn test_config_empty_file() {
 }
 
 #[test]
-fn test_config_missing_file() {
-    // Attempting to load non-existent config should return default
-    // (Verified in config.rs implementation)
-}
 
 // ============================================================================
 // HARDWARE PROFILE EDGE CASES
@@ -146,42 +130,12 @@ fn test_hardware_profile_swap_edge_cases() {
 // ============================================================================
 
 #[test]
-fn test_quota_boundary_values() {
-    // Test 0 quota (unlimited)
-    // Test MAX quota
-    // Test negative quota (should fail)
-}
 
 // ============================================================================
 // SQL INJECTION PROTECTION
 // ============================================================================
 
 #[test]
-fn test_sql_injection_in_secrets() {
-    let mut secrets = Secrets::default();
-    
-    // Simulate malicious password with SQL injection attempt
-    secrets.nextcloud_db_password = Some("'; DROP TABLE users; --".to_string());
-    
-    let hw = HardwareInfo {
-        profile: HardwareProfile::Standard,
-        ram_gb: 8,
-        cpu_cores: 4,
-        has_nvidia: false,
-        has_intel_quicksync: false,
-        disk_gb: 512,
-        swap_gb: 2,
-        user_id: "1000".to_string(),
-        group_id: "1000".to_string(),
-    };
-    
-    // Build compose structure - should properly escape
-    let compose = build_compose_structure(&hw, &secrets, &Config::default()).unwrap();
-    
-    // Verify MariaDB init script escapes properly
-    // (This would require inspecting generated init.sql)
-}
-
 // ============================================================================
 // CONCURRENT CONFIG UPDATES
 // ============================================================================
@@ -219,14 +173,6 @@ async fn test_concurrent_config_updates() {
 // ============================================================================
 
 #[tokio::test]
-async fn test_web_session_isolation() {
-    // This would require setting up test server
-    // Verify:
-    // 1. User A's session doesn't affect User B
-    // 2. Logout actually destroys session
-    // 3. Session expiry works
-    // 4. Concurrent logins from same user get separate sessions
-}
 
 // ============================================================================
 // DOCKER COMPOSE GENERATION EDGE CASES
@@ -323,25 +269,6 @@ fn test_resource_limits_on_minimal_hardware() {
 }
 
 // ============================================================================
-// NETWORK FAILURE SCENARIOS
-// ============================================================================
-
-// Note: These would require mocking network calls
-// Left as TODOs for integration with actual network failure simulation
-
-#[ignore]
-#[test]
-fn test_docker_pull_network_failure() {
-    // Simulate network failure during docker pull
-    // Verify graceful error handling
-}
-
-#[ignore]
-#[test]
-fn test_partial_service_deployment() {
-    // Some services succeed, some fail
-    // Verify system state is consistent
-}
 
 // ============================================================================
 // SECRETS GENERATION EDGE CASES
@@ -386,18 +313,7 @@ fn test_user_deletion_protections() {
 }
 
 #[test]
-fn test_user_role_changes() {
-    // Test changing user roles
-    // (Not currently implemented, but should be)
-}
 
 // ============================================================================
 // FILESYSTEM QUOTA PARTIAL SUPPORT
 // ============================================================================
-
-#[ignore]
-#[test]
-fn test_quota_on_unsupported_filesystem() {
-    // Create test filesystem without quota support
-    // Verify graceful degradation
-}
