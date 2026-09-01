@@ -42,6 +42,10 @@ if ! docker compose version &> /dev/null; then
     error "Docker Compose (V2) is not installed. Please install it."
 fi
 
+if ! command -v openssl &> /dev/null; then
+    error "OpenSSL is not installed. Please install OpenSSL."
+fi
+
 # ------------------------------------------------------------------------------
 # 2. Directory Scaffolding
 # ------------------------------------------------------------------------------
